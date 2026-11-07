@@ -120,13 +120,20 @@
 - ข้อความที่ terminal เข้ารหัสไม่ได้ (เช่น console cp874) ถูกแทนด้วย `?` แทนที่จะ crash
 - CI ขั้น package รัน `assumptionradar scenarios` จาก wheel ที่ติดตั้งแล้ว
 
-**สถานะ P1-15 (2026-11-07):** ✅ เสร็จในเครื่อง (Windows) · 441 tests ผ่าน · รอผล CI บน Linux/macOS
+**สถานะ P1-15 (2026-11-07):** ✅ เสร็จ · 441 tests ผ่าน และไม่มีเทสถูก skip ทั้ง 12 job ใน CI (ubuntu/windows/macos × 3.11–3.14) · ผลตรงตามที่คาดไว้ทุกตัวบนทั้ง 3 OS
 - `tests/fixtures/positive`: 5 เทสที่ผ่านบนเครื่องผู้เขียนแต่ฝังสมมติฐานไว้ ได้แก่ เปิด `config.json` แบบ relative · เวลา local เทียบกับ snapshot ที่บันทึกบนเครื่องผู้เขียน · ต้องมี env var · เรียก `git` ผ่าน PATH · `open()` โดยไม่ระบุ encoding
 - `tests/fixtures/negative`: งานเดียวกันแบบ portable (`Path(__file__).parent`, ระบุ tz, `monkeypatch.setenv`, path เต็มของโปรแกรม, `encoding="utf-8"`)
 - `tests/e2e/test_fixture_projects.py` รัน plugin จริงใน process แยก แล้วเทียบผลแบบ**ตรงทุกตัว**: verdict ของทุกเทสทุกกลุ่ม scenario และชุด event ที่ถูกติด `!` · positive ต้องได้ regression ตรงตามที่ฝังไว้และไม่มีเกิน · negative ต้องไม่มีอะไรเลย · รายงานผ่าน schema และ `report show` ให้ exit code 1 / 0 ตามลำดับ
 - ไฟล์ "ที่บันทึกบนเครื่องผู้เขียน" (เวลา local, ไฟล์ข้อความใน encoding ของเครื่อง) สร้างตอนรันเทส จึงผ่าน baseline ได้ทุกเครื่อง
 - fixture ไม่ถูกเก็บโดยชุดเทสหลัก (`collect_ignore`) และมี per-file ignore ของ ruff เพราะตั้งใจเขียนผิด
 - ข้อจำกัด: `git` ผ่าน PATH จับได้จาก observation เท่านั้น (ยังไม่มี scenario ที่ตัด PATH) · e2e ใช้เวลา ~45 วินาที
+
+**สถานะ P1-16 (2026-11-07):** ✅ เสร็จ · 477 tests ผ่าน · ruff และ mypy strict ผ่าน
+- `tests/security/` ทดสอบผ่าน plugin จริง: ค่าลับไม่หลุดเข้ารายงานและ terminal summary · home directory ไม่อยู่ในรายงาน · state ของ process แม่ไม่เปลี่ยน (env, cwd, tz, locale, tempdir, `os.environ`) เทียบกับ control run · timeout ตัดเทสที่ค้างได้และ process ลูกหายจริง · output ในรายงานไม่เกิน 4,000 ตัวอักษร
+- **บั๊กที่เจอและแก้:**
+  1. regex ใน `redact_text` 2 ตัว backtrack แบบกำลังสอง → output ยาว 200K ตัวอักษรทำให้ pytest run ค้างไม่จบ · แก้ให้ linear (1MB ≈ 0.1 วินาที) + เทสความเร็ว
+  2. ค่าลับที่โผล่แบบไม่มี `key=` นำหน้า (ใน path หรือข้อความ assertion) หลุดเข้ารายงาน · แก้: `secret_env_values()` ดึงค่าของ env var ที่ชื่อดูเป็นความลับ (TOKEN, PASSWORD, SECRET, CREDENTIAL, APIKEY, `*_KEY`; ยาว ≥ 8) ไปปิดทับทั้งใน output ของ child และใน event ของ observer
+- ข้อจำกัด: ค่าลับที่ไม่ได้มาจาก env var และไม่ตรง pattern (เช่น อ่านจากไฟล์แล้วพิมพ์ออกมาเฉยๆ) ยังกันไม่ได้ · เขียนไว้ใน docs ตอน P1-17
 
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 

@@ -22,7 +22,7 @@ from assumptionradar.analysis.verification import (
     Scenario,
     outcome_from_exit_code,
 )
-from assumptionradar.utils.redact import redact_text
+from assumptionradar.utils.redact import redact_text, secret_env_values
 
 CHILD_CONFIG_ENV = "ASSUMPTIONRADAR_CHILD"
 _CHILD_MODULE = "assumptionradar.analysis._child"
@@ -155,7 +155,11 @@ class SubprocessRunner:
                 outcome = RunOutcome.COLLECTION_ERROR
 
             full = "\n".join((_decode(raw_out), _decode(raw_err)))
-            redacted = redact_text(full, max_length=max(len(full), 1))
+            redacted = redact_text(
+                full,
+                max_length=max(len(full), 1),
+                extra_secrets=secret_env_values(env),
+            )
             output_tail = redacted[-self._max_output_chars :]
             probe = _read_probe(probe_path)
 

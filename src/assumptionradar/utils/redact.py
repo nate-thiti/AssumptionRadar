@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import os
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Final
 
 REDACTED: Final[str] = "[REDACTED]"
 _MIN_SECRET_LENGTH: Final = 4
+_MIN_ENV_SECRET_LENGTH: Final = 8
+_SECRET_NAME_WORDS: Final[frozenset[str]] = frozenset(
+    {"TOKEN", "PASSWORD", "PASSWD", "SECRET", "CREDENTIAL", "CREDENTIALS", "APIKEY"}
+)
 
 
 class _HomeDefault:
@@ -30,10 +34,15 @@ _PRIVATE_KEY_RE = re.compile(
     r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|\Z)",
     re.DOTALL,
 )
-_URL_CREDENTIALS_RE = re.compile(r"([A-Za-z][A-Za-z0-9+.-]*://[^\s:/@]+:)[^\s/@]+(@)")
+# Patterns below must stay linear in the input length: child output can be large.
+# The scheme is capped at 32 characters so a long run of letters is not rescanned
+# from every position (quadratic backtracking).
+_URL_CREDENTIALS_RE = re.compile(r"([A-Za-z][A-Za-z0-9+.-]{0,31}://[^\s:/@]+:)[^\s/@]+(@)")
 _BEARER_RE = re.compile(r"(Bearer[ \t]+)[^\s\"',]+", re.IGNORECASE)
 _ASSIGNMENT_RE = re.compile(
-    r"(?P<head>[\"']?[A-Za-z0-9_.-]*"
+    # The key must end with a secret word; any name before it is left out of the
+    # match on purpose (it is never rewritten, and matching it was quadratic).
+    r"(?P<head>"
     r"(?:password|passwd|pwd|secret|token|api_key|apikey|api-key|access_key"
     r"|private_key|credentials|credential)"
     r"[\"']?[ \t]*[=:][ \t]*)"
@@ -76,6 +85,53 @@ def _home_pattern(home: str) -> re.Pattern[str] | None:
     return re.compile(r"(?<![\w.\\/-])" + body + r"(?![\w.-])", re.IGNORECASE)
 
 
+def mask_values(text: str, values: Iterable[str]) -> str:
+    """Replace each literal value in ``text`` with ``REDACTED``.
+
+    Longer values are replaced first so that a value containing another value
+    is masked whole. Values shorter than 4 characters are ignored.
+
+    Args:
+        text: Text to mask.
+        values: Literal secret values to replace.
+
+    Returns:
+        The masked text.
+    """
+    secrets = sorted(
+        {v for v in values if len(v) >= _MIN_SECRET_LENGTH}, key=lambda v: (-len(v), v)
+    )
+    for secret in secrets:
+        text = text.replace(secret, REDACTED)
+    return text
+
+
+def secret_env_values(environ: Mapping[str, str] | None = None) -> frozenset[str]:
+    """Return the values of environment variables whose names look secret.
+
+    A name is secret-looking when one of its ``_``-separated words is a secret
+    word (such as ``TOKEN`` or ``PASSWORD``), or when its last word is ``KEY``.
+    Matching is case-insensitive and word-based, so ``TOKENIZERS`` is not secret.
+
+    Values shorter than 8 characters are skipped. Short values such as ``true``
+    or ``1234567`` would mask ordinary words in report output.
+
+    Args:
+        environ: Mapping to inspect. None means ``os.environ``.
+
+    Returns:
+        The qualifying values as a frozenset.
+    """
+    source: Mapping[str, str] = os.environ if environ is None else environ
+    values: set[str] = set()
+    for name, value in source.items():
+        words = name.upper().split("_")
+        is_secret = words[-1] == "KEY" or any(word in _SECRET_NAME_WORDS for word in words)
+        if is_secret and len(value) >= _MIN_ENV_SECRET_LENGTH:
+            values.add(value)
+    return frozenset(values)
+
+
 def redact_text(
     text: str,
     *,
@@ -106,11 +162,7 @@ def redact_text(
     for pattern in _TOKEN_RES:
         out = pattern.sub(REDACTED, out)
 
-    secrets = sorted(
-        {s for s in extra_secrets if len(s) >= _MIN_SECRET_LENGTH}, key=lambda s: (-len(s), s)
-    )
-    for secret in secrets:
-        out = out.replace(secret, REDACTED)
+    out = mask_values(out, extra_secrets)
 
     home_value = _resolve_home(home)
     if home_value is not None:

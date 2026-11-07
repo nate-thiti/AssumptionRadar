@@ -22,7 +22,7 @@ from typing import Final, Self
 import assumptionradar
 from assumptionradar.core.exceptions import ObserverError
 from assumptionradar.core.models import SourceLocation
-from assumptionradar.utils.redact import redact_text
+from assumptionradar.utils.redact import mask_values, redact_text, secret_env_values
 
 
 class EventKind(StrEnum):
@@ -512,6 +512,7 @@ class RuntimeObserver:
         self._test_id: str | None = None
         self._file_cache: dict[str, bool] = {}
         self._env_original: Callable[..., str] | None = None
+        self._secrets: frozenset[str] = frozenset()
 
     def __enter__(self) -> Self:
         """Activate the observer.
@@ -523,6 +524,7 @@ class RuntimeObserver:
         with _ACTIVATION_LOCK:
             if _ACTIVE is not None:
                 raise ObserverError("another RuntimeObserver is already active")
+            self._secrets = secret_env_values()
             if not _HOOK_INSTALLED:
                 sys.addaudithook(_audit_hook)
                 _HOOK_INSTALLED = True
@@ -570,6 +572,8 @@ class RuntimeObserver:
 
     def _add_error(self, message: str) -> None:
         """Keep at most ``MAX_ERRORS`` handler error messages."""
+        if self._secrets:
+            message = mask_values(message, self._secrets)
         with self._lock:
             if len(self._errors) < MAX_ERRORS:
                 self._errors.append(message)
@@ -599,6 +603,11 @@ class RuntimeObserver:
         """Filter, attribute and buffer one event."""
         if self._kinds is not None and kind not in self._kinds:
             return
+        if self._secrets:
+            target = mask_values(target, self._secrets)
+            attributes = {
+                key: mask_values(value, self._secrets) for key, value in attributes.items()
+            }
         location = self._locate(frame)
         if location is None and self._require_project_frame:
             with self._lock:
