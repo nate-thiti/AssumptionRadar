@@ -14,16 +14,15 @@ from pathlib import Path
 import pytest
 
 from assumptionradar.analysis.runner import SubprocessRunner
-from assumptionradar.analysis.runtime import EventKind, Observation, RuntimeObserver
+from assumptionradar.analysis.runtime import Observation, RuntimeObserver
 from assumptionradar.analysis.scenarios import parse_scenario_spec
 from assumptionradar.analysis.verification import Scenario, VerificationResult, Verifier
 from assumptionradar.core.exceptions import VerificationError
 from assumptionradar.core.models import VerificationStatus
 from assumptionradar.reporting.json_report import build_pytest_report, write_json
+from assumptionradar.reporting.terminal import render_report
 
 _STATE_KEY = pytest.StashKey["_State"]()
-_MAX_SUMMARY_EVENTS = 20
-_MAX_SUMMARY_SKIPPED = 10
 _NOT_VERIFIED_REASON = "did not pass in this session"
 _LIMIT_REASON = "verification limit reached"
 
@@ -172,6 +171,10 @@ def _write_terminal_line(config: pytest.Config, text: str) -> None:
     """Write one line to the terminal reporter when one is available."""
     reporter = config.pluginmanager.get_plugin("terminalreporter")
     if reporter is not None:
+        # At session finish pytest's progress line ("..... [100%]") is still open and
+        # write_line() does not always end it, so end it here when it is non-empty.
+        if getattr(reporter, "_width_of_current_line", 0):
+            reporter.write("\n")
         reporter.write_line(text)
 
 
@@ -257,63 +260,15 @@ def pytest_unconfigure(config: pytest.Config) -> None:
         _stop_observer(state)
 
 
-def _observation_lines(observation: Observation) -> list[str]:
-    """Build the observation part of the terminal summary."""
-    counts: dict[EventKind, int] = {}
-    for event in observation.events:
-        counts[event.kind] = counts.get(event.kind, 0) + 1
-    parts = [f"{kind}: {counts[kind]}" for kind in EventKind if kind in counts]
-    lines = [
-        f"observed {len(observation.events)} event(s) ({', '.join(parts)}); "
-        f"{observation.unattributed} unattributed, {observation.dropped} dropped"
-    ]
-    for event in observation.events[:_MAX_SUMMARY_EVENTS]:
-        attrs = ", ".join(f"{k}={v}" for k, v in event.attributes.items())
-        loc = event.location
-        if loc is None:
-            where = "unknown location"
-        elif loc.line is None:
-            where = loc.path
-        else:
-            where = f"{loc.path}:{loc.line}"
-        lines.append(
-            f"  {event.kind} {event.target} [{attrs}] at {where} ({event.test_id or 'collection'})"
-        )
-    extra = len(observation.events) - _MAX_SUMMARY_EVENTS
-    if extra > 0:
-        lines.append(f"  ... {extra} more (use --assumption-report for all events)")
-    return lines
-
-
-def _verification_lines(state: _State) -> list[str]:
-    """Build the verification part of the terminal summary."""
-    names = ", ".join(s.name for s in state.scenarios)
-    lines = [f"verification ({names}):"]
-    for result in state.results:
-        lines.append(f"  {result.status.value:<14} {result.test_id}")
-        for sr in result.scenarios:
-            if sr.status is not VerificationStatus.NO_DIFFERENCE:
-                lines.append(f"      {sr.scenario}: {sr.status.value}: {sr.reason}")
-    if state.skipped:
-        shown = "; ".join(f"{t} ({r})" for t, r in state.skipped[:_MAX_SUMMARY_SKIPPED])
-        if len(state.skipped) > _MAX_SUMMARY_SKIPPED:
-            shown += " ..."
-        lines.append(f"  skipped {len(state.skipped)} test(s): {shown}")
-    return lines
-
-
 def pytest_terminal_summary(terminalreporter: pytest.TerminalReporter) -> None:
     """Print what was observed, verified and written."""
     state = _state_of(terminalreporter.config)
     if state is None:
         return
     terminalreporter.section("assumptionradar")
-    if state.observation is not None:
-        for line in _observation_lines(state.observation):
-            terminalreporter.write_line(line)
-    if state.options.verify_spec is not None:
-        for line in _verification_lines(state):
-            terminalreporter.write_line(line)
+    data = build_pytest_report(state.observation, state.results, state.skipped)
+    for line in render_report(data):
+        terminalreporter.write_line(line.text, **({line.style: True} if line.style else {}))
     if state.report_error is not None:
         terminalreporter.write_line(f"assumptionradar: {state.report_error}", red=True)
     elif state.report_written and state.report_path is not None:

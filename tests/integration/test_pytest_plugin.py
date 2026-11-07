@@ -193,8 +193,12 @@ class TestVerify:
         )
         assert result.ret == 0  # not strict: verification never changes the exit code
         out = result.stdout.str()
-        assert "regression" in out
-        assert "test_rel.py::test_reads" in out
+        assert "REGRESSION    test_rel.py::test_reads" in out
+        assert "cwd: regression (reproduced)" in out
+        assert "fix: build paths from Path(__file__).parent" in out
+        assert "NO_DIFFERENCE test_ok.py::test_ok" in out
+        # The progress message starts on its own line, not after pytest's "[100%]".
+        assert any(line.startswith("assumptionradar: verifying") for line in out.splitlines())
         report = load(project.path / "out.json")
         assert report["observation"] is None
         by_id = {v["test_id"]: v for v in report["verifications"]}

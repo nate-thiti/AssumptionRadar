@@ -103,6 +103,14 @@
 - เพิ่ม `types-jsonschema` ใน dev extras สำหรับ mypy
 - ลำดับ key คงที่มาจากโค้ด (`to_dict`) · JSON Schema ตรวจลำดับ key ไม่ได้
 
+**สถานะ P1-13 (2026-11-07):** ✅ เสร็จ · 400 tests ผ่าน · ruff และ mypy strict ผ่าน
+- `reporting/terminal.py` แสดงผลจาก**รายงาน v1** (dict เดียวกับ JSON) เพื่อให้ plugin กับ `report show` (P1-14) ใช้ตัวเดียวกัน · ยังไม่แสดง `Finding` เพราะยังไม่มีขั้นตอนไหนสร้าง Finding (รอ static scanner ใน Phase 2)
+- verification ขึ้นก่อน เรียงตามความรุนแรง (regression → error → inconclusive → unsupported → no_difference) · regression ระบุชนิดหลักฐาน `(reproduced)` และมีบรรทัด `fix:` ตามชนิด scenario
+- observation ขึ้นเหตุการณ์ที่น่าสงสัยก่อนโดยมีเครื่องหมาย `!` (path แบบ relative · เรียกโปรแกรมผ่าน PATH · อ่าน env var ที่ไม่มี) · ตำแหน่งเป็น `file:line`
+- สีรองรับ `NO_COLOR` และ `FORCE_COLOR` (ใช้ใน CLI) · ใน pytest ให้ pytest จัดการสีเอง
+- snapshot tests ระบุข้อความที่คาดไว้ทุกตัวอักษร · Haiku เขียน implementation ตามเทสผ่านในรอบเดียว
+- แก้บั๊กระหว่างทาง: ข้อความ "verifying…" เคยไปต่อท้ายบรรทัด `[100%]` ของ pytest
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
