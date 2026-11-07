@@ -79,6 +79,9 @@ known-first-party = ["assumptionradar"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S603", "ANN", "PLR2004"]
 "tests/integration/**" = ["S101", "S603", "ANN", "PLR2004", "E501"]
+# Fixture projects contain deliberate environment assumptions (relative open, local
+# time, PATH lookup, default encoding); they are the subject of the e2e tests.
+"tests/fixtures/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH123", "DTZ006", "PLW1514"]
 
 [tool.mypy]
 strict = true

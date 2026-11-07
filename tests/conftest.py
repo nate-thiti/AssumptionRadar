@@ -8,3 +8,6 @@ import assumptionradar.analysis.runtime as _runtime
 setattr(_runtime._audit_hook, "__cantrace__", True)  # noqa: B010
 
 pytest_plugins = ["pytester"]
+
+# Fixture projects are run by tests/e2e in their own pytest process, not collected here.
+collect_ignore = ["fixtures"]

@@ -120,6 +120,14 @@
 - ข้อความที่ terminal เข้ารหัสไม่ได้ (เช่น console cp874) ถูกแทนด้วย `?` แทนที่จะ crash
 - CI ขั้น package รัน `assumptionradar scenarios` จาก wheel ที่ติดตั้งแล้ว
 
+**สถานะ P1-15 (2026-11-07):** ✅ เสร็จในเครื่อง (Windows) · 441 tests ผ่าน · รอผล CI บน Linux/macOS
+- `tests/fixtures/positive`: 5 เทสที่ผ่านบนเครื่องผู้เขียนแต่ฝังสมมติฐานไว้ ได้แก่ เปิด `config.json` แบบ relative · เวลา local เทียบกับ snapshot ที่บันทึกบนเครื่องผู้เขียน · ต้องมี env var · เรียก `git` ผ่าน PATH · `open()` โดยไม่ระบุ encoding
+- `tests/fixtures/negative`: งานเดียวกันแบบ portable (`Path(__file__).parent`, ระบุ tz, `monkeypatch.setenv`, path เต็มของโปรแกรม, `encoding="utf-8"`)
+- `tests/e2e/test_fixture_projects.py` รัน plugin จริงใน process แยก แล้วเทียบผลแบบ**ตรงทุกตัว**: verdict ของทุกเทสทุกกลุ่ม scenario และชุด event ที่ถูกติด `!` · positive ต้องได้ regression ตรงตามที่ฝังไว้และไม่มีเกิน · negative ต้องไม่มีอะไรเลย · รายงานผ่าน schema และ `report show` ให้ exit code 1 / 0 ตามลำดับ
+- ไฟล์ "ที่บันทึกบนเครื่องผู้เขียน" (เวลา local, ไฟล์ข้อความใน encoding ของเครื่อง) สร้างตอนรันเทส จึงผ่าน baseline ได้ทุกเครื่อง
+- fixture ไม่ถูกเก็บโดยชุดเทสหลัก (`collect_ignore`) และมี per-file ignore ของ ruff เพราะตั้งใจเขียนผิด
+- ข้อจำกัด: `git` ผ่าน PATH จับได้จาก observation เท่านั้น (ยังไม่มี scenario ที่ตัด PATH) · e2e ใช้เวลา ~45 วินาที
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
