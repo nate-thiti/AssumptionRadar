@@ -88,6 +88,13 @@
 | P1-13 | `reporting/terminal.py`: สรุปตาม severity, rule id, ตำแหน่ง `file:line`, ชนิดหลักฐาน, วิธีแก้ · รองรับ `NO_COLOR` | Haiku | snapshot test | P1-12 |
 | P1-14 | CLI ขั้นต่ำ: `--version`, `rules`, `explain <RULE>`, `report show <json>` · กำหนด exit code (0 ผ่าน · 1 เจอ finding เกินเกณฑ์ · 2 config ผิด · 3 internal error · 4 verification inconclusive) · stdout ห้ามปน log เมื่อเลือก `--format json` | Haiku | เทส CLI ด้วย `subprocess` | P1-12 |
 
+**สถานะ P1-11 (2026-11-07):** ✅ เสร็จ · 336 tests ผ่าน (pytester 24 ข้อ) · ruff และ mypy strict ผ่าน
+- มี option `--assumption-observe`, `-env-reads`, `-verify`, `-verify-max`, `-timeout`, `-report`, `-strict` · ยังไม่มี `--assumption-rules` เพราะยังไม่มีชุดกฎ (มาพร้อม static scanner ใน Phase 2)
+- แยกเป็นสองโมดูล: `pytest_plugin.py` (เบา โหลดในทุก pytest run มีแค่ option) และ `_pytest_session.py` (โหลดเฉพาะตอนผู้ใช้ใส่ option) · ยืนยันแล้วว่า import ตัวเบาไม่ดึงโมดูล analysis/reporting เข้ามา
+- child process ของ verification ปิด plugin ตัวเองผ่าน `mark_verification_child()` จึงไม่วนซ้ำแม้ option มาทาง `PYTEST_ADDOPTS`
+- แก้บั๊กระหว่างทาง: ตัวกรอง import ของ runtime เดิมตัดโค้ดระดับโมดูลของโปรเจคทิ้ง (เช่น `open()` ตอน import test file) · ตอนนี้ไล่ frame จนเจอไฟล์โปรเจคก่อนจึงนับ
+- ยังไม่ได้ทำ: coverage ของโค้ดฝั่ง verification ใน `_pytest_session.py` (69%) ไม่ครบ เพราะรันใน subprocess ของ pytester · ค้างรวมกับเรื่องเปิด coverage ใน subprocess
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |

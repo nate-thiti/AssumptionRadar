@@ -497,3 +497,29 @@ class TestSerialisation:
         ev = ObservedEvent(EventKind.CHDIR, "x", {"relative": "true"}, None, None)
         with pytest.raises(TypeError):
             ev.attributes["a"] = "b"  # type: ignore[index]
+
+
+class TestModuleLevelCode:
+    """Module-level code runs under import-system frames but is project code."""
+
+    def test_module_level_read_is_recorded(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        (tmp_path / "settings.txt").write_text("x", encoding="utf-8")
+        (tmp_path / "ar_modlevel_cfg.py").write_text(
+            "from pathlib import Path\n"
+            "CONFIG = (Path(__file__).parent / 'settings.txt').read_text(encoding='utf-8')\n",
+            encoding="utf-8",
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        with RuntimeObserver(tmp_path) as obs:
+            importlib.import_module("ar_modlevel_cfg")
+        events = obs.observation().events
+        reads = [e for e in events if e.target.endswith("settings.txt")]
+        assert len(reads) == 1
+        assert reads[0].location is not None
+        assert reads[0].location.path == "ar_modlevel_cfg.py"
+        assert reads[0].location.line == 2
+        assert reads[0].location.symbol == "<module>"
+        # The import system's own reads of the module source are still ignored.
+        assert not [e for e in events if e.target.endswith("ar_modlevel_cfg.py")]

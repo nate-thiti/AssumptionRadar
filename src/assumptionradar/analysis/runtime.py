@@ -222,12 +222,22 @@ def _argv_from(value: object) -> list[str]:
     return []
 
 
-def _from_import_system(frame: FrameType | None) -> bool:
-    """Return True when any frame on the stack belongs to the import system."""
+def _from_import_system(frame: FrameType | None, observer: RuntimeObserver) -> bool:
+    """Return True when the event was raised by the import system itself.
+
+    Walking outward from the event, an import-system frame reached *before* any
+    project frame means the import machinery did the work (reading a module's
+    source or bytecode). A project frame reached first means project code did it,
+    even when that code is module-level code being executed by an import, such as
+    ``CONFIG = open("config.json").read()``.
+    """
     current = frame
     while current is not None:
-        if current.f_code.co_filename.startswith(_IMPORT_FRAME_PREFIX):
+        filename = current.f_code.co_filename
+        if filename.startswith(_IMPORT_FRAME_PREFIX):
             return True
+        if observer._is_project_file(filename):
+            return False
         current = current.f_back
     return False
 
@@ -412,7 +422,7 @@ def _audit_hook(event: str, args: tuple[object, ...]) -> None:
     _GUARD.busy = True
     try:
         frame = sys._getframe(1)
-        if _from_import_system(frame):
+        if _from_import_system(frame, observer):
             return
         described = _describe(event, args)
         if described is None:
@@ -573,7 +583,7 @@ class RuntimeObserver:
     ) -> None:
         """Record an event from a wrapper. Errors are contained, never raised."""
         try:
-            if _from_import_system(frame):
+            if _from_import_system(frame, self):
                 return
             self._record(kind, target, attributes, frame)
         except Exception as exc:

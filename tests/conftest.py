@@ -6,3 +6,5 @@ import assumptionradar.analysis.runtime as _runtime
 # ``__cantrace__``. Allow it in the test suite only, so coverage can measure
 # the hook's code paths; production keeps the default (no tracing in hooks).
 setattr(_runtime._audit_hook, "__cantrace__", True)  # noqa: B010
+
+pytest_plugins = ["pytester"]

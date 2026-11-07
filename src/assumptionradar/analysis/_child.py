@@ -92,6 +92,9 @@ def main(argv: list[str]) -> int:
         print(f"assumptionradar: pytest is not available: {exc}", file=sys.stderr)
         return 3
     recorder = _CollectionRecorder()
+    from assumptionradar.integrations import pytest_plugin  # noqa: PLC0415
+
+    pytest_plugin.mark_verification_child()
     exit_code = int(pytest.main(argv, plugins=[recorder]))
     result_path = config.get("result_path")
     if result_path:

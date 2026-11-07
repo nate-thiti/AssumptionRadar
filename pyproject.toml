@@ -38,7 +38,7 @@ Changelog = "https://github.com/nate-thiti/AssumptionRadar/blob/main/CHANGELOG.m
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
-    "pytest-cov>=5.0",
+    "pytest-cov>=5.0", "pytest-xdist>=3.6",
     "ruff>=0.8",
     "mypy>=1.13",
     "build>=1.2",
@@ -49,6 +49,9 @@ dev = [
 
 [project.scripts]
 assumptionradar = "assumptionradar.cli:main"
+
+[project.entry-points.pytest11]
+assumptionradar = "assumptionradar.integrations.pytest_plugin"
 
 [tool.hatch.version]
 path = "src/assumptionradar/__init__.py"
