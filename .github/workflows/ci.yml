@@ -56,6 +56,9 @@ jobs:
       - name: Environment-override spike (records platform behaviour, see docs/spikes/0001)
         if: matrix.python == '3.14'
         run: python -I tools/spikes/spike_env.py
+      - name: Scenario verdicts on this platform (diagnostic)
+        if: matrix.python == '3.14'
+        run: python -I tools/diagnostics/scenario_verdicts.py
       - name: Tests
         run: python -m pytest -ra --cov --cov-branch --cov-report=term --cov-report=xml
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

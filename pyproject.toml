@@ -63,7 +63,7 @@ include = ["src", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md", "pypr
 target-version = "py311"
 line-length = 100
 src = ["src", "tests"]
-extend-exclude = ["tools/spikes"]
+extend-exclude = ["tools"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "PTH", "DTZ", "S", "ANN", "PL"]
