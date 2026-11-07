@@ -125,7 +125,7 @@
 |---|---|---|---|---|
 | P3-1 | Plugin contract: `Detector` base class สาธารณะ · entry point group `assumptionradar.detectors` · detector ที่ crash ต้องไม่ทำให้รายงานพัง (ถูกบันทึกเป็น error ของ detector นั้น) · โหมด strict/non-strict | Opus → Haiku | `examples/custom-detector/` ติดตั้งแล้วถูกค้นเจอจริง | P2-12 |
 | P3-2 | Test-order investigation (opt-in): สลับลำดับด้วย seed แบบมีจำนวนรอบจำกัด · บันทึก seed และลำดับ · bisect หาคู่เทสที่กระทบกัน · ห้ามอ้างว่าพิสูจน์ order-independence ได้ | Opus → Haiku | fixture เทสที่พึ่งลำดับถูกจับได้และ reproduce ได้ด้วย seed | P1-11 |
-| P3-3 | GitHub Actions: lint, type, test matrix (ubuntu/windows/macos × 3.11–3.13), pip-audit, build + twine check, docs build · **pin action ด้วย commit SHA** | Haiku เขียน → Sonnet ดีบักเมื่อ CI แดง | CI เขียวทุก job | P1-18 + **ผู้ใช้สร้าง GitHub repo** |
+| P3-3 ✅ | GitHub Actions: lint, type, test matrix (ubuntu/windows/macos × 3.11–3.13), pip-audit, build + twine check, docs build · **pin action ด้วย commit SHA** | Haiku เขียน → Sonnet ดีบักเมื่อ CI แดง | CI เขียวทุก job | P1-18 + **ผู้ใช้สร้าง GitHub repo** |
 | P3-4 | Release workflow: Trusted Publishing (OIDC) + GitHub environment `pypi` ที่ต้องมีคนอนุมัติ · ไม่มี token ฝังในไฟล์ | Haiku | dry-run ไป TestPyPI ผ่าน (**ผู้ใช้ตั้ง trusted publisher**) | P3-3 |
 | P3-5 | mkdocs site ครบ 22 หน้าตาม spec (ส่วนไหนที่ยังไม่ได้ implement ให้เขียนว่า "ยังไม่รองรับ") | Opus เขียน · Haiku ตั้ง mkdocs | `mkdocs build --strict` ผ่าน · ตัวอย่างใน docs รันได้ | P3-1 |
 | P3-6 | Real-world validation: static scan บน OSS 3–5 repo (ทำในโฟลเดอร์ทิ้งได้) · verify mode **รันเฉพาะใน container/VM** · นับ true/false positive | Sonnet รัน · **Opus ตัดสิน TP/FP** | `docs/validation.md` เป็นตัวเลขจริง | P2-13 |
