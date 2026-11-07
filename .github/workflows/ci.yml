@@ -87,6 +87,7 @@ jobs:
           /tmp/clean/bin/python -m pip install dist/*.whl
           /tmp/clean/bin/assumptionradar --version
           /tmp/clean/bin/python -c "import assumptionradar, assumptionradar.analysis.verification, assumptionradar.analysis.runtime; print(assumptionradar.__version__)"
+          /tmp/clean/bin/python -c "from assumptionradar.reporting.json_report import load_report_schema as f; assert f()['properties']['schema_version'] == {'const': '1'}; print('schema packaged')"
 
   audit:
     name: Dependency audit

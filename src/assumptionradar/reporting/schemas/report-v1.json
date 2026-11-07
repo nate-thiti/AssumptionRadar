@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/nate-thiti/AssumptionRadar/schemas/report-v1.json",
+  "title": "AssumptionRadar pytest report, schema version 1",
+  "description": "Report written by the pytest plugin with --assumption-report. Additive changes keep schema_version \"1\"; removing or renaming a field, or changing its meaning, requires a new version.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tool",
+    "platform",
+    "observation",
+    "verifications",
+    "verification_skipped"
+  ],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "assumptionradar" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "python"],
+      "properties": {
+        "system": { "type": "string", "minLength": 1, "description": "sys.platform of the host." },
+        "python": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+" }
+      }
+    },
+    "observation": {
+      "description": "Runtime observation, or null when --assumption-observe was not given.",
+      "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/observation" }]
+    },
+    "verifications": {
+      "type": "array",
+      "description": "One entry per verified test, in session order.",
+      "items": { "$ref": "#/$defs/verification" }
+    },
+    "verification_skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["test_id", "reason"],
+        "properties": {
+          "test_id": { "$ref": "#/$defs/test_id" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "test_id": { "type": "string", "minLength": 1 },
+    "string_map": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "verification_status": {
+      "enum": ["not_verified", "regression", "no_difference", "inconclusive", "unsupported", "error"]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line", "column", "symbol"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Project-relative POSIX path.",
+          "not": { "pattern": "(^/)|(^[A-Za-z]:)|\\\\|(^|/)\\.\\.(/|$)" }
+        },
+        "line": { "type": ["integer", "null"], "minimum": 1 },
+        "column": { "type": ["integer", "null"], "minimum": 1 },
+        "symbol": { "type": ["string", "null"] }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "target", "attributes", "location", "test_id"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "file_open",
+            "dir_list",
+            "dir_create",
+            "file_remove",
+            "file_rename",
+            "chdir",
+            "env_read",
+            "env_write",
+            "dns_lookup",
+            "network_connect",
+            "subprocess"
+          ]
+        },
+        "target": { "type": "string", "description": "Redacted target (path, variable name, host or program)." },
+        "attributes": { "$ref": "#/$defs/string_map" },
+        "location": {
+          "description": "Innermost project frame that caused the event, if any.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/location" }]
+        },
+        "test_id": {
+          "description": "Test running when the event happened; null during collection or outside tests.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/test_id" }]
+        }
+      }
+    },
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["events", "dropped", "unattributed", "errors"],
+      "properties": {
+        "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+        "dropped": { "type": "integer", "minimum": 0 },
+        "unattributed": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "exit_code", "duration_s", "output_tail", "probe"],
+      "properties": {
+        "outcome": {
+          "enum": ["passed", "failed", "collection_error", "no_tests", "error", "timeout"]
+        },
+        "exit_code": { "type": ["integer", "null"], "description": "null when the run timed out." },
+        "duration_s": { "type": "number", "minimum": 0 },
+        "output_tail": { "type": "string" },
+        "probe": {
+          "description": "Values the child reported about its own environment, if any.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/string_map" }]
+        }
+      }
+    },
+    "scenario_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenario", "status", "reason", "run"],
+      "properties": {
+        "scenario": { "type": "string", "minLength": 1 },
+        "status": { "$ref": "#/$defs/verification_status" },
+        "reason": { "type": "string" },
+        "run": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/run" }] }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["test_id", "status", "baseline", "scenarios", "limitations"],
+      "properties": {
+        "test_id": { "$ref": "#/$defs/test_id" },
+        "status": { "$ref": "#/$defs/verification_status" },
+        "baseline": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/run" } },
+        "scenarios": { "type": "array", "items": { "$ref": "#/$defs/scenario_result" } },
+        "limitations": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    }
+  }
+}

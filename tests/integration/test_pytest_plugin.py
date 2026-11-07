@@ -11,9 +11,11 @@ import re
 from pathlib import Path
 from typing import Any
 
+import jsonschema
 import pytest
 
 from assumptionradar.analysis import runtime
+from assumptionradar.reporting.json_report import load_report_schema
 
 RELATIVE_READ = """
 def test_reads():
@@ -29,8 +31,14 @@ def test_ok():
 """
 
 
+VALIDATOR = jsonschema.Draft202012Validator(load_report_schema())
+
+
 def load(path: Path) -> dict[str, Any]:
+    """Read a report written by a real run and check it against the published schema."""
     data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    problems = [f"{list(e.absolute_path)}: {e.message}" for e in VALIDATOR.iter_errors(data)]
+    assert problems == [], problems
     return data
 
 
@@ -194,6 +202,18 @@ class TestVerify:
         assert by_id["test_ok.py::test_ok"]["status"] == "no_difference"
         assert [s["scenario"] for s in by_id["test_rel.py::test_reads"]["scenarios"]] == ["cwd"]
         assert report["verification_skipped"] == []
+
+    def test_observe_and_verify_together(self, project: pytest.Pytester) -> None:
+        project.makepyfile(test_rel=RELATIVE_READ)
+        result = project.runpytest_subprocess(
+            "--assumption-observe", "--assumption-verify=cwd,tz", "--assumption-report=out.json"
+        )
+        assert result.ret == 0
+        report = load(project.path / "out.json")  # validates against the schema
+        assert report["observation"] is not None
+        assert [v["test_id"] for v in report["verifications"]] == ["test_rel.py::test_reads"]
+        runs = report["verifications"][0]["baseline"]
+        assert all(run["probe"] for run in runs)
 
     def test_strict_fails_on_regression(self, project: pytest.Pytester) -> None:
         project.makepyfile(test_rel=RELATIVE_READ)

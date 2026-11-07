@@ -14,6 +14,7 @@ import platform
 import sys
 import tempfile
 from collections.abc import Mapping, Sequence
+from importlib import resources
 from pathlib import Path
 
 import assumptionradar
@@ -21,6 +22,21 @@ from assumptionradar.analysis.runtime import Observation
 from assumptionradar.analysis.verification import VerificationResult
 
 SCHEMA_VERSION = "1"
+SCHEMA_RESOURCE = f"schemas/report-v{SCHEMA_VERSION}.json"
+
+
+def load_report_schema() -> dict[str, object]:
+    """Return the JSON Schema (draft 2020-12) for reports of the current version.
+
+    The schema ships inside the package, so it matches the installed version.
+    """
+    text = (
+        resources.files("assumptionradar.reporting")
+        .joinpath(SCHEMA_RESOURCE)
+        .read_text(encoding="utf-8")
+    )
+    schema: dict[str, object] = json.loads(text)
+    return schema
 
 
 def build_pytest_report(

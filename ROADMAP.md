@@ -95,6 +95,14 @@
 - แก้บั๊กระหว่างทาง: ตัวกรอง import ของ runtime เดิมตัดโค้ดระดับโมดูลของโปรเจคทิ้ง (เช่น `open()` ตอน import test file) · ตอนนี้ไล่ frame จนเจอไฟล์โปรเจคก่อนจึงนับ
 - ยังไม่ได้ทำ: coverage ของโค้ดฝั่ง verification ใน `_pytest_session.py` (69%) ไม่ครบ เพราะรันใน subprocess ของ pytester · ค้างรวมกับเรื่องเปิด coverage ใน subprocess
 
+**สถานะ P1-12 (2026-11-07):** ✅ เสร็จ · 364 tests ผ่าน · ruff และ mypy strict ผ่าน
+- schema (JSON Schema draft 2020-12) อยู่ที่ `src/assumptionradar/reporting/schemas/report-v1.json` และ**ติดไปกับ wheel** (ไม่ได้วางไว้ที่ `docs/schema/` ตามแผนเดิม เพื่อให้มีที่เดียวและให้ `report show` ใน P1-14 ใช้ตรวจได้) · โหลดผ่าน `load_report_schema()`
+- schema ปิดไม่ให้มี key ที่ไม่รู้จัก (`additionalProperties: false`) · ค่า enum ใน schema มีเทสบังคับให้ตรงกับ enum ในโค้ด · path ต้องเป็นแบบ relative POSIX
+- เทส: เอกสาร schema ถูกต้องตาม draft 2020-12 · รายงานตัวอย่างที่ครอบทุกกิ่ง (null/ไม่ null) ผ่าน · รายงานที่ถูกแก้ให้ผิด 20 แบบถูกปฏิเสธทุกแบบ · **รายงานทุกฉบับจาก pytest run จริงใน integration tests ถูก validate ด้วย** (รวม observe+verify ในรันเดียว)
+- CI ขั้น package ตรวจเพิ่มว่า wheel ที่ติดตั้งแล้วโหลด schema ได้
+- เพิ่ม `types-jsonschema` ใน dev extras สำหรับ mypy
+- ลำดับ key คงที่มาจากโค้ด (`to_dict`) · JSON Schema ตรวจลำดับ key ไม่ได้
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
