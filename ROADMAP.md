@@ -63,6 +63,9 @@
 | P1-6 | `analysis/verification.py`: รัน `sys.executable -m pytest <nodeid> -p no:cacheprovider -q` ด้วย `subprocess.run` (ไม่ใช้ `shell=True`) · timeout · จำกัดขนาด output · รัน baseline ก่อน ถ้า baseline fail → `inconclusive` · รัน baseline ซ้ำ N ครั้งเพื่อจับเทส flaky | Haiku | เทส P1-5 เขียว · parent process `os.environ` และ `os.getcwd()` ไม่เปลี่ยน (assert ในเทส) | P1-5 |
 | P1-7 | Built-in scenarios: `cwd` (tmp dir ว่าง), `tz` (บน Windows ใช้ TZ แบบ POSIX เช่น `JST-9` เท่านั้น), `encoding` (`PYTHONUTF8=1` เทียบกับ code page ของระบบ), `locale` (บน Windows ตั้งผ่าน `setlocale` ใน child เพราะ env var ไม่มีผล), `env-unset:<NAME>`, `tmpdir` · **child ต้องตรวจเองว่าเงื่อนไขมีผลจริง** (ADR-0003) ถ้าไม่มีผลต้องคืน `unsupported` หรือ `inconclusive` **ห้ามคืน `no_difference`** | Opus สเปก → Haiku | เทส e2e: fixture ที่พังจริงได้ผล `regression` ส่วน fixture ที่ปลอดภัยได้ผล `no_difference` | P1-6, P0-3 |
 
+**สถานะ 1B (2026-11-07):** ✅ P1-5 ถึง P1-7 เสร็จ · 273 tests ผ่าน (มี integration 24 ข้อที่รัน child process จริงบน Windows + Python 3.14) · ยังไม่ได้รันบน Linux/macOS · `_child.py` ยังไม่มีตัวเลข coverage เพราะรันใน subprocess (ต้องเปิด coverage แบบ subprocess ทีหลัง)
+- บทเรียน: pytest คืน exit code 4 (ไม่ใช่ 2) เมื่อ import โมดูลเทสล้มเหลวและเรียกด้วย node id เจาะจง ตอนนี้ child จึงนับ collection error ผ่าน hook ของ pytest โดยตรง ไม่เดาจาก exit code
+
 ### 1C. Runtime observation
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
