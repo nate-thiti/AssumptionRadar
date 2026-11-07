@@ -17,3 +17,7 @@ class ConfigurationError(AssumptionRadarError):
 
 class VerificationError(AssumptionRadarError):
     """Raised when a finding cannot be verified at all (for example, the baseline cannot start)."""
+
+
+class ObserverError(AssumptionRadarError):
+    """Raised when a runtime observer is misused, for example by nested activation."""

@@ -23,9 +23,22 @@ Options considered:
 Use audit hooks as the primary mechanism.
 
 - Audit hooks **cannot be removed** once added. The hook is installed once per process and is a
-  no-op unless a `ContextVar`-scoped recorder is active, so nothing is recorded outside an
-  explicit observation window and nothing leaks between tests.
-- A re-entrancy guard prevents the hook from observing its own work.
+  no-op unless a recorder is active, so nothing is recorded outside an explicit observation
+  window and nothing leaks between tests. Its first statement rejects unhandled event names, so
+  the cost for all other audit events is one set lookup.
+- *Amended 2026-11-07:* the active recorder is a process-global (one at a time, guarded by a
+  lock), not a `ContextVar`. A `ContextVar` is not inherited by threads started with
+  `threading.Thread`, so work done in background threads would have been silently missed.
+  Starting a second observer while one is active raises `ObserverError`.
+- A thread-local re-entrancy guard prevents the hook from observing its own work.
+- Events raised by the import system (any frame from `<frozen importlib…>`) are ignored, so
+  importing modules is not reported as file access.
+- Events are attributed to the nearest frame inside the project root, excluding
+  AssumptionRadar's own package and virtual-environment / site-packages directories. Events
+  with no such frame are counted as `unattributed` and not stored (unless requested).
+- On Windows the `subprocess.Popen` event carries one command-line string rather than an
+  argument list; the program name is recovered by splitting it. Arguments are never stored,
+  only their count.
 - Events go into a bounded buffer; overflow is counted and reported, never silently dropped.
 - Source attribution walks the caller frames and skips frames belonging to the stdlib and to
   AssumptionRadar itself.

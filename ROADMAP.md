@@ -74,6 +74,11 @@
 | P1-9 | Implement `analysis/runtime.py` ตาม P1-8 | Haiku | เทสเปิดไฟล์ด้วย relative path แล้ว event ระบุไฟล์+บรรทัดถูก · ไม่มี event รั่วข้ามเทส · overhead วัดได้และบันทึกไว้ | P1-8 |
 | P1-10 | (opt-in) ติดตามการอ่าน env var ด้วย wrapper ครอบ `os.environ` เพราะไม่มี audit event ให้ · บันทึกแค่ชื่อตัวแปร · คืนค่าเดิมทุกครั้ง (รวมกรณีเกิด exception) | Opus → Haiku | เทสยืนยันว่า `os.environ` กลับเป็น object เดิมหลังจบ และไม่มีค่าตัวแปรใดในรายงาน | P1-9 |
 
+**สถานะ 1C (2026-11-07):** ✅ P1-8 ถึง P1-10 เสร็จ · 312 tests ผ่าน · coverage ของ `runtime.py` 87% (branch)
+- บทเรียน: CPython ปิดการ trace ภายใน audit hook โดยค่าเริ่มต้น จึงต้องตั้ง `__cantrace__` ใน `tests/conftest.py` เพื่อให้วัด coverage ได้ ส่วนโค้ดจริงคงค่าเดิม
+- บทเรียน: บน Windows, event `subprocess.Popen` ส่ง args มาเป็น command line string ไม่ใช่ list
+- ค้างไว้ทำทีหลัง: `redact_text` เรียก `Path.home()` ทุก event ควร cache ไว้ (วัดผลใน benchmark ก่อนแก้) · เทสของ `os.spawn` และ path แบบ bytes ยังไม่ครอบ
+
 ### 1D. pytest plugin + รายงาน
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
