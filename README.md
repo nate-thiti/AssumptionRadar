@@ -4,7 +4,7 @@ Discover hidden assumptions before they break your software.
 
 ## Status
 
-Pre-alpha. Not yet published. See [ROADMAP.md](ROADMAP.md) and [docs/adr](docs/adr).
+Pre-alpha. Source: https://github.com/nate-thiti/AssumptionRadar (not yet published on PyPI). See [ROADMAP.md](ROADMAP.md) and [docs/adr](docs/adr).
 
 ## Development
 

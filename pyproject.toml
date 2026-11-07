@@ -29,6 +29,12 @@ classifiers = [
     "Typing :: Typed",
 ]
 
+[project.urls]
+Homepage = "https://github.com/nate-thiti/AssumptionRadar"
+Repository = "https://github.com/nate-thiti/AssumptionRadar"
+Issues = "https://github.com/nate-thiti/AssumptionRadar/issues"
+Changelog = "https://github.com/nate-thiti/AssumptionRadar/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",

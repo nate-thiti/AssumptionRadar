@@ -36,7 +36,7 @@
 - P0-3 ✅ ดู [docs/spikes/0001-env-overrides.md](docs/spikes/0001-env-overrides.md)
 - P0-4 ✅ [docs/adr/](docs/adr/) 0001–0004
 - P0-5 ✅ skeleton: ruff/mypy strict/pytest ผ่าน, build wheel+sdist ผ่าน `twine check --strict`, `assumptionradar --version` ทำงาน (venv Python 3.14, ruff 0.17.4, mypy 2.4.1, pytest 9.2.0)
-- License: MIT · Author: SomNate · GitHub repo URL: ยังไม่มี · git init แล้วแต่ยังไม่ commit
+- License: MIT · Author: SomNate · GitHub: https://github.com/nate-thiti/AssumptionRadar (public, 2026-11-07)
 
 ---
 
