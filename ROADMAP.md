@@ -111,6 +111,15 @@
 - snapshot tests ระบุข้อความที่คาดไว้ทุกตัวอักษร · Haiku เขียน implementation ตามเทสผ่านในรอบเดียว
 - แก้บั๊กระหว่างทาง: ข้อความ "verifying…" เคยไปต่อท้ายบรรทัด `[100%]` ของ pytest
 
+**สถานะ P1-14 (2026-11-07):** ✅ เสร็จ · 439 tests ผ่าน · ruff และ mypy strict ผ่าน
+- คำสั่ง: `scenarios`, `explain <name>`, `report show <json>` (`--format text|json`, `--color auto|always|never`, `--exit-zero`) · ทุกคำสั่งมี `--format json` ที่ stdout เป็น JSON ล้วน (ASCII-safe)
+- **เปลี่ยนจากแผน:** ใช้ `scenarios` แทน `rules` และ `explain` รับชื่อ scenario เพราะกฎ `AR-*` ยังไม่มีจนกว่าจะถึง Phase 2 · Phase 2 จะเพิ่ม `rules` และให้ `explain` รับ rule id
+- exit code: 0 ผ่าน · 1 มี regression · 2 ใช้คำสั่งผิดหรือรายงานเสีย/ผิด schema · 3 internal error (ไม่มี traceback ให้ผู้ใช้เห็น) · 4 inconclusive/error
+- `core/catalog.py` เป็นที่เดียวของคำอธิบาย scenario และข้อความ `fix:` (terminal renderer ดึงจากที่นี่) · มีเทสบังคับให้ catalog ตรงกับ scenario จริง
+- ตรวจรูปร่างรายงานเองโดยไม่ใช้ jsonschema ตอนรัน → ไม่เพิ่ม dependency
+- ข้อความที่ terminal เข้ารหัสไม่ได้ (เช่น console cp874) ถูกแทนด้วย `?` แทนที่จะ crash
+- CI ขั้น package รัน `assumptionradar scenarios` จาก wheel ที่ติดตั้งแล้ว
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |

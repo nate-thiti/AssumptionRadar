@@ -11,9 +11,11 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Final
 
 from assumptionradar.analysis.runtime import EventKind
+from assumptionradar.core.catalog import SCENARIO_CATALOG
 
 ANSI_STYLES: Final[Mapping[str, str]] = {
     "red": "\x1b[31m",
@@ -26,16 +28,9 @@ ANSI_STYLES: Final[Mapping[str, str]] = {
 ANSI_RESET: Final = "\x1b[0m"
 """ANSI escape sequence that clears all styles."""
 
-FIX_HINTS: Final[Mapping[str, str]] = {
-    "cwd": "build paths from Path(__file__).parent or a fixture instead of the working directory",
-    "tmpdir": "use the tmp_path fixture instead of the system temporary directory",
-    "tz": (
-        "pass an explicit tzinfo (e.g. datetime.now(timezone.utc)) instead of relying on local time"
-    ),
-    "encoding": "pass encoding= explicitly to open(), read_text() and write_text()",
-    "locale": "avoid locale-dependent formatting, or set the locale explicitly in a fixture",
-    "env-unset": "give the variable a default, or set it in a fixture with monkeypatch.setenv",
-}
+FIX_HINTS: Final[Mapping[str, str]] = MappingProxyType(
+    {info.family: info.fix for info in SCENARIO_CATALOG}
+)
 """Suggested fix for each scenario family, keyed by the part before the first colon."""
 
 _RANK: Final[tuple[str, ...]] = (
