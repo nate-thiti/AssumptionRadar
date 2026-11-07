@@ -63,6 +63,9 @@ extend-exclude = ["tools/spikes"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF", "PTH", "DTZ", "S", "ANN", "PL"]
 ignore = ["PLR0913"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["assumptionradar"]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S603", "ANN", "PLR2004"]
 

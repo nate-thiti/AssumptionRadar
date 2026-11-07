@@ -53,6 +53,8 @@
 | P1-3 | Fingerprint: sha256 ของ `rule_id + relpath + symbol + normalized snippet` (**ไม่ใช้เลขบรรทัด** เพื่อไม่ให้เพี้ยนเมื่อมีคนเพิ่มบรรทัด) — Opus เขียนเทส · Haiku implement | Opus → Haiku | เทสยืนยันว่า fingerprint คงเดิมเมื่อเลื่อนบรรทัด และเปลี่ยนเมื่อแก้โค้ด | P1-2 |
 | P1-4 | `utils/redact.py`: ห้ามเก็บค่า env var (เก็บแค่ชื่อ), แทน home dir ด้วย `~`, ตัดสตริงที่ยาวเกินกำหนด, mask pattern ที่หน้าตาเป็น token — Opus เขียนเทส · Haiku implement | Opus → Haiku | เทสยิง secret ปลอม 10 แบบแล้วไม่มีค่าใดหลุดออกมา | P1-2 |
 
+**สถานะ 1A (2026-11-07):** ✅ P1-1 ถึง P1-4 เสร็จ · 126 tests ผ่าน · coverage ของ models และ fingerprint 100% ส่วน redact 94% (branch)
+
 ### 1B. Verification engine
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
