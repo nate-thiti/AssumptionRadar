@@ -135,6 +135,13 @@
   2. ค่าลับที่โผล่แบบไม่มี `key=` นำหน้า (ใน path หรือข้อความ assertion) หลุดเข้ารายงาน · แก้: `secret_env_values()` ดึงค่าของ env var ที่ชื่อดูเป็นความลับ (TOKEN, PASSWORD, SECRET, CREDENTIAL, APIKEY, `*_KEY`; ยาว ≥ 8) ไปปิดทับทั้งใน output ของ child และใน event ของ observer
 - ข้อจำกัด: ค่าลับที่ไม่ได้มาจาก env var และไม่ตรง pattern (เช่น อ่านจากไฟล์แล้วพิมพ์ออกมาเฉยๆ) ยังกันไม่ได้ · เขียนไว้ใน docs ตอน P1-17
 
+**สถานะ P1-17 (2026-11-08):** ✅ เสร็จ · 490 tests ผ่าน · ruff และ mypy strict ผ่าน
+- เอกสาร: `README.md` (เขียนใหม่), `docs/quickstart.md`, `docs/limitations.md`, `docs/security.md` (ระบุชัดว่า re-run **ไม่ใช่ sandbox**)
+- `tests/docs/test_doc_examples.py` รันทุก code block จริง: ทุกบล็อกต้องมี marker (`file` / `run` / `output` / `skip` พร้อมเหตุผล) ไม่งั้นเทสตก · คำสั่งถูกรันใน sandbox แยกต่อเอกสาร · output ที่แสดงในเอกสารต้องตรงกับของจริง (`...` ข้ามส่วนที่ต่างตามเครื่อง) · ลิงก์ relative ทุกอันต้องชี้ไฟล์ที่มีอยู่
+- บล็อกที่ skip มี 3 บล็อก: `pip install` จาก GitHub (ต้องใช้เน็ต; CI ขั้น package ทดสอบ wheel แทน), ขั้นตอน development, ตัวอย่าง YAML ของ CI
+- ทุกข้อความในเอกสารเช็คกับโค้ดจริงแล้ว (audit events ที่รองรับ, ค่า default, กฎ redaction)
+- ยังไม่ได้ทำ: private vulnerability reporting บน GitHub ยังปิดอยู่ · `docs/security.md` จึงให้เปิด issue ขอช่องทางติดต่อแบบไม่ใส่รายละเอียดแทน
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |
