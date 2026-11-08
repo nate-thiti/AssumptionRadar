@@ -142,6 +142,14 @@
 - ทุกข้อความในเอกสารเช็คกับโค้ดจริงแล้ว (audit events ที่รองรับ, ค่า default, กฎ redaction)
 - ยังไม่ได้ทำ: private vulnerability reporting บน GitHub ยังปิดอยู่ · `docs/security.md` จึงให้เปิด issue ขอช่องทางติดต่อแบบไม่ใส่รายละเอียดแทน
 
+**สถานะ P1-18 (2026-11-08):** ✅ เสร็จ · `tools/release_check.py` ผ่านทุกขั้นบน Windows (Python 3.14)
+- ขั้นตอน: build sdist + wheel → `twine check --strict` → ตรวจไฟล์ใน wheel (schema, `py.typed`, entry point ของ CLI และ pytest11, ไม่มี tests/tools, ไม่มี runtime dependency, License MIT) → ลิงก์ใน README ต้องเป็น absolute → ติดตั้ง wheel + pytest ใน venv ใหม่แล้วทดสอบ CLI, pytest ปกติไม่ถูกกระทบ, option ขึ้นใน `--help`, plugin จับ regression ได้และ `--assumption-strict` ให้ exit 1, `report show` → ติดตั้ง sdist ใน venv ใหม่ (build จาก source) แล้วเช็คเวอร์ชันและ schema
+- เจอและแก้: ลิงก์ใน README เป็น relative ซึ่งจะเสียบนหน้า PyPI → เปลี่ยนเป็น URL เต็มของ GitHub
+- CI ขั้น package รันสคริปต์นี้ด้วย จึงไม่ล้าสมัย
+- เวอร์ชันยังเป็น `0.1.0.dev0` · การตั้งเวอร์ชันจริงและ publish อยู่ใน Phase 3 (P3-4, P3-9 ต้องให้ผู้ใช้อนุมัติ)
+
+**Phase 1 (v0.1 "Verify") ครบทุกงานแล้ว**
+
 ### 1E. ทดสอบจริง + ปล่อย v0.1
 
 | ID | งาน | ชั้น | เกณฑ์รับงาน | รอ |

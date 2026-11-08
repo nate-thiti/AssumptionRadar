@@ -95,7 +95,7 @@ pytest options (all opt-in; without them the plugin does nothing):
 | `--assumption-timeout=SECONDS` | timeout for each re-run (default 120) |
 | `--assumption-observe` | record files, environment writes, subprocesses and network use by project code |
 | `--assumption-env-reads` | also record environment variable reads (names only) |
-| `--assumption-report=PATH` | write a JSON report ([schema](src/assumptionradar/reporting/schemas/report-v1.json)) |
+| `--assumption-report=PATH` | write a JSON report ([schema](https://github.com/nate-thiti/AssumptionRadar/blob/main/src/assumptionradar/reporting/schemas/report-v1.json)) |
 | `--assumption-strict` | fail the run when a regression is found (for CI) |
 
 Command line:
@@ -111,10 +111,10 @@ Exit codes of `report show`: `0` nothing found, `1` regression, `2` bad input,
 
 ## Learn more
 
-- [Quickstart](docs/quickstart.md): a full walk-through, including CI
-- [Limitations](docs/limitations.md): what AssumptionRadar does **not** prove
-- [Security model](docs/security.md): the re-runs are **not a sandbox**
-- [Design decisions](docs/adr) and [ROADMAP](ROADMAP.md)
+- [Quickstart](https://github.com/nate-thiti/AssumptionRadar/blob/main/docs/quickstart.md): a full walk-through, including CI
+- [Limitations](https://github.com/nate-thiti/AssumptionRadar/blob/main/docs/limitations.md): what AssumptionRadar does **not** prove
+- [Security model](https://github.com/nate-thiti/AssumptionRadar/blob/main/docs/security.md): the re-runs are **not a sandbox**
+- [Design decisions](https://github.com/nate-thiti/AssumptionRadar/tree/main/docs/adr) and [ROADMAP](https://github.com/nate-thiti/AssumptionRadar/blob/main/ROADMAP.md)
 
 ## Development
 
