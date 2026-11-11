@@ -185,6 +185,13 @@
 - เจอและแก้: ไฟล์ที่มี NUL byte ทำให้ `tokenize` พัง → ตอนนี้รายงานเป็น syntax error
 - ยังไม่มี rule จริง (เริ่มที่ P2-2)
 
+**สถานะ P2-2 (2026-11-11):** ✅ เสร็จ · 592 tests ผ่าน · ruff และ mypy strict ผ่าน
+- `static/rules/cwd.py` (`AR-CWD-001`): ตรวจ relative path ที่ถูกเข้าถึงจริง ทั้ง `open`/`io`/`codecs`/`os`/`os.path`/`shutil`/`glob`/`sqlite3`/`tarfile`/`zipfile` และ method ของ `Path` (`read_text`, `exists`, `glob`, ...) รวมถึง `Path("a") / "b"`, `os.path.join("a", ...)` และ f-string (confidence medium) · ไม่ตรวจ path ที่สร้างอย่างเดียว · `default_rules()` ใน `static/rules/__init__.py`
+- ไม่นับเป็น relative: absolute, drive letter, UNC, `~`, URL, `file:`, `:memory:`, `NUL` · ข้ามการเรียกที่มี `dir_fd`/`root_dir`
+- ชุดเทส fixture ใช้ซ้ำได้: `tests/fixtures/static/<กลุ่ม>/*.py` ใส่ comment `# expect: <rule id>` ไว้ท้ายบรรทัด แล้วเทียบผลแบบตรงตัว (negative ต้องไม่มี finding เลย)
+- ลองสแกน repo นี้เอง: เจอ 10 จุดใน `tests/unit/test_runtime.py` ซึ่งถูกทั้งหมด (เทสนั้นใช้ `monkeypatch.chdir` ไว้โดยตั้งใจ) · ไม่มีจุดที่เจอผิด
+- ข้อจำกัด: ไม่ติดตามตัวแปร (`p = Path("x"); p.read_text()` ไม่ถูกจับ) และไม่รู้ว่าโค้ดเปลี่ยน cwd ไว้ก่อนแล้ว
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"
