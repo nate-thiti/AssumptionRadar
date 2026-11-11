@@ -8,8 +8,19 @@ from __future__ import annotations
 
 from assumptionradar.static.engine import Rule
 from assumptionradar.static.rules.cwd import RelativePathAccessRule
+from assumptionradar.static.rules.env import (
+    RequiredEnvVarRule,
+    UndeclaredEnvVarRule,
+    collect_env_reads,
+)
 
-__all__ = ["RelativePathAccessRule", "default_rules"]
+__all__ = [
+    "RelativePathAccessRule",
+    "RequiredEnvVarRule",
+    "UndeclaredEnvVarRule",
+    "collect_env_reads",
+    "default_rules",
+]
 
 
 def default_rules() -> tuple[Rule, ...]:
@@ -18,4 +29,4 @@ def default_rules() -> tuple[Rule, ...]:
     Returns:
         New rule instances. Each call returns new objects.
     """
-    return (RelativePathAccessRule(),)
+    return (RelativePathAccessRule(), RequiredEnvVarRule())

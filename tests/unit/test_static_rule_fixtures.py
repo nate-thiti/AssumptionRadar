@@ -34,7 +34,12 @@ def expected_findings(path: Path) -> Counter[tuple[int, str]]:
 
 def test_fixture_files_exist() -> None:
     names = {p.relative_to(FIXTURES).as_posix() for p in FIXTURE_FILES}
-    assert {"cwd/positive.py", "cwd/negative.py"} <= names
+    assert {
+        "cwd/positive_cwd.py",
+        "cwd/negative_cwd.py",
+        "env/positive_env.py",
+        "env/negative_env.py",
+    } <= names
 
 
 @pytest.mark.parametrize("path", FIXTURE_FILES, ids=lambda p: p.relative_to(FIXTURES).as_posix())
@@ -46,7 +51,7 @@ def test_fixture_matches_markers(path: Path) -> None:
         (f.location.line or 0, f.rule_id) for f in result.findings if f.location is not None
     )
     assert actual == expected_findings(path)
-    if path.stem == "negative":
+    if path.stem.startswith("negative"):
         assert result.findings == ()
-    if path.stem == "positive":
+    if path.stem.startswith("positive"):
         assert result.findings

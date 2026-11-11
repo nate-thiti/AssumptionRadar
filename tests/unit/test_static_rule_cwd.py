@@ -56,7 +56,7 @@ def test_rule_identity() -> None:
     rule = RelativePathAccessRule()
     assert (rule.rule_id, rule.version) == ("AR-CWD-001", "1")
     rules = default_rules()
-    assert [r.rule_id for r in rules] == ["AR-CWD-001"]
+    assert "AR-CWD-001" in [r.rule_id for r in rules]
     assert default_rules()[0] is not rules[0]  # fresh instances every call
 
 

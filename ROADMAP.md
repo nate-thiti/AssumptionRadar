@@ -192,6 +192,12 @@
 - ลองสแกน repo นี้เอง: เจอ 10 จุดใน `tests/unit/test_runtime.py` ซึ่งถูกทั้งหมด (เทสนั้นใช้ `monkeypatch.chdir` ไว้โดยตั้งใจ) · ไม่มีจุดที่เจอผิด
 - ข้อจำกัด: ไม่ติดตามตัวแปร (`p = Path("x"); p.read_text()` ไม่ถูกจับ) และไม่รู้ว่าโค้ดเปลี่ยน cwd ไว้ก่อนแล้ว
 
+**สถานะ P2-3 (2026-11-11):** ✅ เสร็จ · 605 tests ผ่าน · ruff และ mypy strict ผ่าน
+- `static/rules/env.py` · `AR-ENV-001` (เป็น default rule): จับ `os.environ["X"]` และ `os.environ.pop("X")` ที่ไม่มี default · ไม่จับเมื่อใน scope เดียวกันหรือ scope ที่ครอบอยู่มีการเช็ค (`in`/`not in`, `.get`, `getenv`), มีการตั้งค่า (`setenv`, `os.environ["X"] = ...`, `setdefault`) หรืออยู่ใน `try` ที่จับ `KeyError`/`LookupError`/`Exception`/bare except · key ที่ไม่ใช่ literal ได้ confidence medium
+- `AR-ENV-002` (ยังไม่เป็น default): รายการ env var ที่ไฟล์อ่าน 1 finding ต่อชื่อต่อไฟล์ ยกเว้นชื่อที่ประกาศไว้ · version ของ rule มี hash ของรายชื่อที่ประกาศ เพื่อให้ cache เปลี่ยนตาม · จะเปิดใช้เมื่อมี config ใน P2-8 · `collect_env_reads()` ใช้ได้กับ CLI ภายหลัง
+- เปลี่ยนชื่อไฟล์ fixture เป็น `positive_<กลุ่ม>.py`/`negative_<กลุ่ม>.py` เพราะ mypy ไม่ยอมให้มีชื่อโมดูลซ้ำกัน
+- ผลกับโปรเจค e2e: fixture positive ได้ `AR-CWD-001` + `AR-ENV-001` ตรงกับที่ runtime พบ · fixture negative ไม่มี finding · ใน repo นี้ไม่มีจุดที่เจอผิด
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"
