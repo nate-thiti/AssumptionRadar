@@ -39,6 +39,8 @@ def test_fixture_files_exist() -> None:
         "cwd/negative_cwd.py",
         "env/positive_env.py",
         "env/negative_env.py",
+        "exe/positive_exe.py",
+        "exe/negative_exe.py",
     } <= names
 
 

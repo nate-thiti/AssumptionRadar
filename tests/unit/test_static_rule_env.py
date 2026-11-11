@@ -35,7 +35,8 @@ def undeclared(source: str, declared: tuple[str, ...] = ()) -> list[Finding]:
 
 
 def test_default_rules_include_env_001_but_not_002() -> None:
-    assert [r.rule_id for r in default_rules()] == ["AR-CWD-001", "AR-ENV-001"]
+    assert [r.rule_id for r in default_rules()][:2] == ["AR-CWD-001", "AR-ENV-001"]
+    assert "AR-ENV-002" not in [r.rule_id for r in default_rules()]
 
 
 def test_required_identity() -> None:

@@ -198,6 +198,12 @@
 - เปลี่ยนชื่อไฟล์ fixture เป็น `positive_<กลุ่ม>.py`/`negative_<กลุ่ม>.py` เพราะ mypy ไม่ยอมให้มีชื่อโมดูลซ้ำกัน
 - ผลกับโปรเจค e2e: fixture positive ได้ `AR-CWD-001` + `AR-ENV-001` ตรงกับที่ runtime พบ · fixture negative ไม่มี finding · ใน repo นี้ไม่มีจุดที่เจอผิด
 
+**สถานะ P2-4 (2026-11-11):** ✅ เสร็จ · 645 tests ผ่าน · ruff และ mypy strict ผ่าน (ทั้ง Windows และ `--platform linux`)
+- `static/rules/exe.py` (`AR-EXE-001`, เป็น default rule): จับคำสั่งที่เรียกด้วยชื่อเปล่า (พึ่ง PATH) ใน `subprocess.*`, `os.system`/`os.popen`, `os.exec*p`/`os.spawn*p`, `asyncio.create_subprocess_*` · รูปแบบ list/tuple, `[...] + x`, และ string (ถ้าผ่าน shell จะข้าม `FOO=1` และ shell builtin เช่น `cd`/`echo`/`dir`) · **ไม่รันคำสั่ง**
+- ไม่จับ: `sys.executable`, absolute path, relative path (`./build.sh`), ชื่อในตัวแปร, `executable=` และเครื่องมือที่ถูกเช็คด้วย `shutil.which("x")` ใน scope เดียวกันหรือ scope ที่ครอบอยู่ (ครอบคลุม `@pytest.mark.skipif(...)` และ `pytestmark`)
+- string ที่ผ่าน shell ได้ confidence medium · ถ้าเป็น `python`/`pip` จะแนะนำให้ใช้ `sys.executable`
+- ผล: fixture e2e positive ได้ครบ 3 rule (`config.json`, env var, `git`) ตรงกับที่ runtime พบ · ใน repo นี้เจอ 2 จุด ซึ่งถูกทั้งคู่ (`tasklist` ในเทส security, เครื่องมือที่ตั้งใจให้ไม่มีใน test_runtime)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

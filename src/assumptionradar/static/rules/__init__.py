@@ -13,13 +13,21 @@ from assumptionradar.static.rules.env import (
     UndeclaredEnvVarRule,
     collect_env_reads,
 )
+from assumptionradar.static.rules.exe import (
+    PathLookupRule,
+    is_bare_program,
+    program_from_command,
+)
 
 __all__ = [
+    "PathLookupRule",
     "RelativePathAccessRule",
     "RequiredEnvVarRule",
     "UndeclaredEnvVarRule",
     "collect_env_reads",
     "default_rules",
+    "is_bare_program",
+    "program_from_command",
 ]
 
 
@@ -29,4 +37,4 @@ def default_rules() -> tuple[Rule, ...]:
     Returns:
         New rule instances. Each call returns new objects.
     """
-    return (RelativePathAccessRule(), RequiredEnvVarRule())
+    return (RelativePathAccessRule(), RequiredEnvVarRule(), PathLookupRule())

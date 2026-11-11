@@ -83,7 +83,7 @@ known-first-party = ["assumptionradar"]
 # time, PATH lookup, default encoding); they are the subject of the e2e tests.
 "tests/fixtures/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH123", "DTZ006", "PLW1514"]
 # Static-rule fixtures exercise the exact os/io/glob APIs the rules look for.
-"tests/fixtures/static/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH", "UP020", "PLW1514", "SIM401", "E722"]
+"tests/fixtures/static/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH", "UP020", "PLW1514", "SIM401", "E722", "S602", "S605", "S606", "PLW1510", "RUF005"]
 
 [tool.mypy]
 strict = true
