@@ -179,6 +179,12 @@
 | P2-12 | Public API: `Radar(rules=..., mode=...)`, `.scan(path)`, `.verify(...)`, `report.to_json()`, `report.to_sarif()`, `report.summary()` + exception classes + docstring | Opus ออกแบบ → Haiku | เทส API + mypy strict | P2-11 |
 | P2-13 | Benchmark (static เท่านั้น ไม่รันโค้ด): repo เล็ก/กลาง/ใหญ่ เช่น `requests`, `flask`, `django` → บันทึกจำนวนไฟล์, LOC, เวลา, peak memory, cache hit | Sonnet | `benchmarks/RESULTS.md` เป็นตัวเลขที่วัดจริง | P2-12 |
 
+**สถานะ P2-1 (2026-11-11):** ✅ เสร็จ · 556 tests ผ่าน (1 skip: เทส symlink บน Windows) · ruff และ mypy strict ผ่าน
+- ออกแบบไว้ใน ADR-0005 · แพ็กเกจ `assumptionradar.static`: `discovery` (glob, default excludes, จำกัดขนาด, ไม่ตาม symlink) · `parsing` (`tokenize.detect_encoding` + `ast.parse` ไม่รันโค้ด) · `imports` (ตาราง alias, resolve `builtins.*`) · `cache` (JSON ตาม sha256, เขียนแบบ atomic) · `engine.scan()` (rule ที่ crash กลายเป็น error ของไฟล์นั้น ไม่ทำให้ scan พัง)
+- เพิ่ม `Finding/Evidence/SourceLocation.from_dict` เพื่อให้อ่านจาก cache ได้ตรงทุกฟิลด์
+- เจอและแก้: ไฟล์ที่มี NUL byte ทำให้ `tokenize` พัง → ตอนนี้รายงานเป็น syntax error
+- ยังไม่มี rule จริง (เริ่มที่ P2-2)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

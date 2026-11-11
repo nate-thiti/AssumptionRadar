@@ -14,7 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 _RULE_ID_RE = re.compile(r"^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+$")
 _FINGERPRINT_RE = re.compile(r"^[0-9a-f]{16}(?::[0-9]+)?$")
@@ -162,6 +162,16 @@ class SourceLocation:
             raise ValueError(f"path {str(path)!r} is outside root {str(root)!r}") from exc
         return cls(relative.as_posix(), line=line, column=column, symbol=symbol)
 
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        """Rebuild a location from the output of ``to_dict``."""
+        return cls(
+            path=str(data["path"]),
+            line=data.get("line"),
+            column=data.get("column"),
+            symbol=data.get("symbol"),
+        )
+
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-compatible dict with fixed keys."""
         return {
@@ -185,6 +195,17 @@ class Evidence:
         """Validate that the method is named."""
         if not self.method.strip():
             raise ValueError("evidence method must not be blank")
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        """Rebuild evidence from the output of ``to_dict``."""
+        location = data.get("location")
+        return cls(
+            kind=EvidenceKind.parse(str(data["kind"])),
+            method=str(data["method"]),
+            detail=str(data["detail"]),
+            location=SourceLocation.from_dict(location) if location is not None else None,
+        )
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-compatible dict."""
@@ -263,6 +284,28 @@ class Finding:
         """Return a copy with a new verification status and optional extra evidence."""
         new_evidence = self.evidence if evidence is None else (*self.evidence, evidence)
         return dataclasses.replace(self, verification=status, evidence=new_evidence)
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> Self:
+        """Rebuild a finding from the output of ``to_dict``."""
+        location = data.get("location")
+        return cls(
+            rule_id=str(data["rule_id"]),
+            title=str(data["title"]),
+            message=str(data["message"]),
+            category=str(data["category"]),
+            severity=Severity.parse(str(data["severity"])),
+            confidence=Confidence.parse(str(data["confidence"])),
+            fingerprint=str(data["fingerprint"]),
+            location=SourceLocation.from_dict(location) if location is not None else None,
+            evidence=tuple(Evidence.from_dict(item) for item in data.get("evidence") or ()),
+            verification=VerificationStatus.parse(str(data.get("verification", "not_verified"))),
+            remediation=str(data.get("remediation", "")),
+            failure_scenario=str(data.get("failure_scenario", "")),
+            docs_url=data.get("docs_url"),
+            test_id=data.get("test_id"),
+            metadata=dict(data.get("metadata") or {}),
+        )
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-compatible dict with fixed key order."""
