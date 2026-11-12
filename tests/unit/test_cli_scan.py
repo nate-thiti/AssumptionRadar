@@ -23,6 +23,13 @@ from assumptionradar.static.rules import default_rules
 SOURCE = "import os\ndef load():\n    return open('config.json')\nos.environ['TOKEN']\n"
 
 
+@pytest.fixture(autouse=True)
+def _no_color_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep ``--color auto`` deterministic: CI sets FORCE_COLOR=1."""
+    monkeypatch.delenv("FORCE_COLOR", raising=False)
+    monkeypatch.delenv("NO_COLOR", raising=False)
+
+
 def run(argv: list[str], capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
     code = main(argv)
     out, err = capsys.readouterr()
