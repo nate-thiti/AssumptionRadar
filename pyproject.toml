@@ -83,12 +83,15 @@ known-first-party = ["assumptionradar"]
 # time, PATH lookup, default encoding); they are the subject of the e2e tests.
 "tests/fixtures/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH123", "DTZ006", "PLW1514"]
 # Static-rule fixtures exercise the exact os/io/glob APIs the rules look for.
-"tests/fixtures/static/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH", "UP020", "PLW1514", "SIM401", "E722", "S602", "S605", "S606", "PLW1510", "RUF005"]
+"tests/fixtures/static/**" = ["S101", "S603", "S607", "ANN", "PLR2004", "PTH", "UP020", "PLW1514", "SIM401", "E722", "S602", "S605", "S606", "PLW1510", "RUF005", "SIM115", "S108", "SIM905", "SIM105"]
 
 [tool.mypy]
 strict = true
 python_version = "3.11"
 files = ["src", "tests"]
+# Platform fixtures deliberately use APIs of several operating systems; they are
+# parsed by the static scanner and never run or imported.
+exclude = ["^tests/fixtures/static/plat/"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

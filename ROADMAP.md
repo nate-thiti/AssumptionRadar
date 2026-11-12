@@ -204,6 +204,12 @@
 - string ที่ผ่าน shell ได้ confidence medium · ถ้าเป็น `python`/`pip` จะแนะนำให้ใช้ `sys.executable`
 - ผล: fixture e2e positive ได้ครบ 3 rule (`config.json`, env var, `git`) ตรงกับที่ runtime พบ · ใน repo นี้เจอ 2 จุด ซึ่งถูกทั้งคู่ (`tasklist` ในเทส security, เครื่องมือที่ตั้งใจให้ไม่มีใน test_runtime)
 
+**สถานะ P2-5 (2026-11-11):** ✅ เสร็จ · 674 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `static/rules/plat.py` (`AR-PLAT-001`, เป็น default rule) รายงาน 4 แบบ (`metadata.kind`): `windows-path` (drive letter, UNC, backslash) และ `posix-path` (absolute `/...`, confidence medium) **เฉพาะ path ที่ถูกเข้าถึงจริง** (ส่งเข้าฟังก์ชัน file system หรือเรียก method ของ `Path`) · `posix-api`/`windows-api` (เช่น `os.fork`, `signal.SIGKILL`, `os.startfile`, `ctypes.windll`) และการ import โมดูลเฉพาะ OS (`fcntl`, `pwd`, `termios`, `msvcrt`, `winreg`, ...)
+- ไม่จับเมื่อ scope เดียวกันหรือ scope ที่ครอบอยู่อ้างถึง `sys.platform`/`os.name`/`platform.system()`/`hasattr(os, ...)` (รวม `skipif` และ early return), อยู่ใต้ `if TYPE_CHECKING:` หรืออยู่ใน `try` ที่จับ `ImportError`/`AttributeError`/`OSError` · `PureWindowsPath`/`PurePosixPath` ถือว่าตั้งใจ
+- ชุดเทส fixture เปลี่ยนให้แต่ละกลุ่มนับเฉพาะ rule ของตัวเอง (`cwd/` นับ `AR-CWD-*` เป็นต้น) · fixture `plat/` ถูกยกเว้นจาก mypy เพราะใช้ API ของหลาย OS โดยตั้งใจ · cwd.py เปิด `FILE_SINKS`/`select_argument` ให้ rule อื่นใช้ร่วม
+- เจอและแก้ระหว่างตรวจ: spec แรกนับ `Path("/home/bob")` ที่แค่สร้างไว้เป็นค่า (ใน test_redact) ว่าผิด → เปลี่ยนเป็นนับเฉพาะ path ที่ถูกเข้าถึง ให้สอดคล้องกับ `AR-CWD-001` · ตอนนี้ใน repo นี้ไม่มี finding ของ `AR-PLAT-001`
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

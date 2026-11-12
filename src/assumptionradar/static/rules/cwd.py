@@ -73,7 +73,7 @@ PATH_METHODS: Final[frozenset[str]] = frozenset(
 _DIR_FD_KEYWORDS: Final[frozenset[str]] = frozenset(
     {"dir_fd", "src_dir_fd", "dst_dir_fd", "root_dir"}
 )
-_FUNCTION_SINKS: Final[dict[str, tuple[tuple[int, str], ...]]] = {
+FILE_SINKS: Final[dict[str, tuple[tuple[int, str], ...]]] = {
     "builtins.open": ((0, "file"),),
     "io.open": ((0, "file"),),
     "codecs.open": ((0, "filename"),),
@@ -190,7 +190,7 @@ def _relative_base(node: ast.expr, imports: ImportTable) -> ast.Constant | ast.J
     return None
 
 
-def _select_argument(call: ast.Call, position: int, keyword: str) -> ast.expr | None:
+def select_argument(call: ast.Call, position: int, keyword: str) -> ast.expr | None:
     """Return the argument bound to a parameter, or None when it cannot be determined.
 
     Args:
@@ -232,8 +232,8 @@ def _function_hits(
         return []
     sink = qualified.removeprefix("builtins.")
     hits: list[tuple[str, ast.expr]] = []
-    for position, keyword in _FUNCTION_SINKS[qualified]:
-        argument = _select_argument(call, position, keyword)
+    for position, keyword in FILE_SINKS[qualified]:
+        argument = select_argument(call, position, keyword)
         if argument is not None and _relative_base(argument, imports) is not None:
             hits.append((sink, argument))
     return hits
@@ -259,7 +259,7 @@ def _call_hits(call: ast.Call, imports: ImportTable) -> list[tuple[str, ast.expr
         Pairs of sink name and offending argument expression.
     """
     qualified = imports.resolve(call.func)
-    if qualified is not None and qualified in _FUNCTION_SINKS:
+    if qualified is not None and qualified in FILE_SINKS:
         return _function_hits(call, qualified, imports)
     if isinstance(call.func, ast.Attribute) and call.func.attr in PATH_METHODS:
         receiver = call.func.value

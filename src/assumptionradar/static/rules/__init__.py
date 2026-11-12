@@ -18,12 +18,15 @@ from assumptionradar.static.rules.exe import (
     is_bare_program,
     program_from_command,
 )
+from assumptionradar.static.rules.plat import PlatformSpecificRule, classify_path_literal
 
 __all__ = [
     "PathLookupRule",
+    "PlatformSpecificRule",
     "RelativePathAccessRule",
     "RequiredEnvVarRule",
     "UndeclaredEnvVarRule",
+    "classify_path_literal",
     "collect_env_reads",
     "default_rules",
     "is_bare_program",
@@ -37,4 +40,9 @@ def default_rules() -> tuple[Rule, ...]:
     Returns:
         New rule instances. Each call returns new objects.
     """
-    return (RelativePathAccessRule(), RequiredEnvVarRule(), PathLookupRule())
+    return (
+        RelativePathAccessRule(),
+        RequiredEnvVarRule(),
+        PathLookupRule(),
+        PlatformSpecificRule(),
+    )
