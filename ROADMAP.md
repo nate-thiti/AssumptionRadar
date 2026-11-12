@@ -243,6 +243,13 @@
 - ข้อจำกัด: ไฟล์ที่ parse ไม่ได้ finding ของไฟล์นั้นจะถูกนับว่า resolved (มีคำเตือนใน stderr)
 - เพิ่ม `.assumptionradar_cache/` ใน `.gitignore`
 
+**สถานะ P2-10 (2026-11-12):** ✅ เสร็จ · 857 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `reporting/sarif.py`: `build_sarif(findings, *, suppressed, errors, root)` และ `sarif_from_scan(result, root=...)` → SARIF 2.1.0 หนึ่ง run · rule descriptor เรียงตาม id (ชื่อ/remediation/docs มาจาก finding แรกของ rule นั้น เพราะยังไม่มี catalog ของ rule static) · level: error→`error`, warning→`warning`, info→`note`
+- result มี `partialFingerprints["assumptionradar/v1"]` = fingerprint ของเรา (GitHub ใช้ติดตามข้าม commit) · path เข้ารหัสเป็น URI สัมพัทธ์กับ `%SRCROOT%` · symbol อยู่ใน `logicalLocations` · finding ที่ถูก ignore ใส่ `suppressions: [{"kind": "inSource"}]` · ไฟล์ที่สแกนไม่ได้เป็น `toolExecutionNotifications`
+- vendor schema ทางการ OASIS errata01 ไว้ที่ `tests/data/sarif-schema-2.1.0.json` (ผู้ใช้อนุมัติให้ดาวน์โหลด · ที่มาและ sha256 อยู่ใน `tests/data/README.md`) ใช้เฉพาะเทส ไม่รวมในแพ็กเกจ · เทส validate ทุกกรณีด้วย Draft-04 validator
+- ลองกับ repo นี้: 118 result, 5 rule, ผ่าน schema 0 error
+- ข้อจำกัด: column มาจาก AST (นับเป็น byte) บรรทัดที่มีอักษรนอก ASCII อาจเลื่อนจาก column แบบ UTF-16 ที่ SARIF ใช้เป็นค่าเริ่มต้น · ยังไม่มี `--format sarif` ใน CLI (มาใน P2-11)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"
