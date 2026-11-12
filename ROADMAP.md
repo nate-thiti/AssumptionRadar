@@ -224,6 +224,15 @@
 - เจอและแก้: helper ในเทสของ Opus ไม่สร้างโฟลเดอร์ย่อย (Haiku รายงาน) · ruff PLR0917 ใน helper ของ engine (Opus แก้เป็น keyword-only)
 - ข้อจำกัด: ถ้า rule crash บนไฟล์หนึ่ง suppression ของ rule นั้นในไฟล์นั้นจะถูกนับว่า stale (crash ถูกรายงานเป็น error อยู่แล้ว)
 
+**สถานะ P2-8 (2026-11-12):** ✅ เสร็จ · 792 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `config.py`: `Settings` (frozen) · `load_settings(root, config_path=None)` · `find_config_file` ไล่ขึ้นจาก root และหยุดที่โฟลเดอร์ที่มี `.git` · ในโฟลเดอร์เดียวกัน `assumptionradar.toml` (key ระดับบนสุด) ชนะ `pyproject.toml` ที่มี `[tool.assumptionradar]` · `Settings.with_overrides(...)` ใช้สำหรับค่าจาก CLI (CLI > ไฟล์ > ค่าเริ่มต้น; ค่า None ไม่ทับ)
+- key แบบมีขีด: `include`, `exclude`, `use-default-excludes`, `max-file-bytes`, `rules`, `ignore-rules`, `strict-suppressions`, `cache`, `cache-dir`, `fail-on`, `format`, `[...env] declared`
+- error ทุกแบบเป็น `ConfigurationError` ที่ขึ้นต้นด้วย path ของไฟล์ (หรือ `command line`) บอกชนิดและค่าที่ได้ และแนะนำชื่อที่ใกล้เคียงสำหรับ key / ค่าตัวเลือก / rule id ที่สะกดผิด
+- `rules_from_settings(settings, project)`: ถ้ามี `env.declared` หรือเลือก `AR-ENV-002` ไว้ใน `rules` จะเปิด `AR-ENV-002` · `AR-IMP-001` ต้องมี pyproject เสมอ · ใช้ `rules` ก่อน แล้วค่อยตัดด้วย `ignore-rules`
+- CLI `assumptionradar config check [ROOT] [--config PATH] [--format text|json]`: config ผิดได้ exit 2 พร้อมข้อความใน stderr · JSON แสดงค่าที่ใช้จริงและ `active_rules`
+- เจอและแก้: เทส JSON ของ Opus ลืมว่ามี pyproject จึงต้องมี `AR-IMP-001` ด้วย · ตอน review เจอว่า root แบบ relative (`.`) ไม่ไล่ขึ้นไปโฟลเดอร์แม่ (`Path(".").parents` ว่าง) → แก้เป็น `absolute()` (ไม่ใช้ `resolve()` เพื่อไม่ให้ path เปลี่ยนรูป) + เพิ่มเทส
+- ยังไม่ได้ใช้ settings ในการ scan จริง ส่วนนี้เป็นของ P2-11 (`scan`)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

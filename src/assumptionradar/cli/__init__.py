@@ -11,12 +11,15 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from assumptionradar import __version__
+from assumptionradar.config import load_settings, rules_from_settings
 from assumptionradar.core.catalog import (
     DEFAULT_SET_NOTE,
     SCENARIO_CATALOG,
     find_scenario_info,
 )
+from assumptionradar.core.exceptions import ConfigurationError
 from assumptionradar.reporting.terminal import render_report, to_text, use_color
+from assumptionradar.static.project import load_project
 
 _DESCRIPTION = "Discover hidden environmental assumptions before they break your software."
 _REPORT_SCHEMA = "1"
@@ -90,6 +93,12 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="always exit 0 after a successful read",
     )
+    config = commands.add_parser("config", help="work with the AssumptionRadar configuration")
+    config_commands = config.add_subparsers(dest="config_command", required=True, metavar="ACTION")
+    check = config_commands.add_parser("check", help="validate the configuration")
+    check.add_argument("root", nargs="?", default=".", help="project root (default: current)")
+    check.add_argument("--config", default=None, help="use this config file instead of discovery")
+    check.add_argument("--format", choices=("text", "json"), default="text")
     return parser
 
 
@@ -232,6 +241,32 @@ def _cmd_report_show(args: argparse.Namespace) -> int:
     return _report_exit(data, args.exit_zero)
 
 
+def _cmd_config_check(args: argparse.Namespace) -> int:
+    """Validate the configuration and report the result."""
+    root = Path(args.root)
+    if not root.is_dir():
+        emit(f"assumptionradar: {root} is not a directory\n", sys.stderr)
+        return ExitCode.USAGE
+    config_path = Path(args.config) if args.config is not None else None
+    try:
+        settings = load_settings(root, config_path)
+    except ConfigurationError as exc:
+        emit(f"assumptionradar: {exc}\n", sys.stderr)
+        return ExitCode.USAGE
+    if args.format == "json":
+        payload = settings.to_dict()
+        payload["active_rules"] = [
+            rule.rule_id for rule in rules_from_settings(settings, load_project(root))
+        ]
+        emit(json.dumps(payload, indent=2) + "\n", sys.stdout)
+        return ExitCode.OK
+    if settings.config_file is None:
+        emit("config OK: no config file found, using defaults\n", sys.stdout)
+    else:
+        emit(f"config OK: {settings.config_file}\n", sys.stdout)
+    return ExitCode.OK
+
+
 def _exit_status(code: str | int | None) -> int:
     """Convert the code of an argparse ``SystemExit`` into an exit status."""
     if code is None:
@@ -250,6 +285,8 @@ def _dispatch(args: argparse.Namespace) -> int:
         return _cmd_explain(args)
     if args.command == "report":
         return _cmd_report_show(args)
+    if args.command == "config":
+        return _cmd_config_check(args)
     return ExitCode.USAGE
 
 
