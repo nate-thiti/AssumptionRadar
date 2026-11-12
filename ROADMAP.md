@@ -217,6 +217,13 @@
 - เจอและแก้ระหว่างตรวจ: สแกน repo นี้แล้ว `pytest.importorskip("xdist")` ถูกนับว่าไม่ได้ประกาศ ทั้งที่ประกาศ `pytest-xdist` ไว้ → เพิ่ม `xdist` และชื่อที่ไม่ตรงกันอื่นๆ ลงตาราง · ตอนนี้ไม่มี finding ของ `AR-IMP-001` ใน repo นี้
 - ทุก rule ของ P2-2 ถึง P2-6 เสร็จแล้ว ต่อไปคือ inline suppression (P2-7)
 
+**สถานะ P2-7 (2026-11-12):** ✅ เสร็จ · 744 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `static/suppression.py`: comment `# assumptionradar: ignore[AR-CWD-001, ...] -- เหตุผล` บนบรรทัดเดียวกับ finding (บรรทัดแรกของ statement) · อ่านจาก token comment จริง ข้อความใน string ไม่นับ · เหตุผลไม่บังคับ
+- `scan(..., strict_suppressions=False)` · `ScanResult.suppressed` เก็บ finding ที่ถูก ignore ไว้แสดงในรายงาน · `ScanResult.suppression_problems` มี 3 แบบ: `malformed` (รูปแบบผิด/rule id ผิด), `bare` (ไม่ระบุ rule ใน strict mode ซึ่งจะไม่ ignore ให้), `stale` (ระบุ rule ที่รันอยู่แต่ไม่มี finding บนบรรทัดนั้นแล้ว · rule ที่ไม่ได้รัน เช่น `AR-IMP-001` ตอนไม่มี pyproject จะไม่ถูกนับว่าค้าง)
+- fingerprint คำนวณ (disambiguate) ก่อน suppression เพื่อให้ baseline (P2-9) ไม่เปลี่ยนเมื่อมีการ ignore · cache เก็บ finding ก่อน suppression
+- เจอและแก้: helper ในเทสของ Opus ไม่สร้างโฟลเดอร์ย่อย (Haiku รายงาน) · ruff PLR0917 ใน helper ของ engine (Opus แก้เป็น keyword-only)
+- ข้อจำกัด: ถ้า rule crash บนไฟล์หนึ่ง suppression ของ rule นั้นในไฟล์นั้นจะถูกนับว่า stale (crash ถูกรายงานเป็น error อยู่แล้ว)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"
