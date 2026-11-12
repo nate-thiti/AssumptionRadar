@@ -210,6 +210,13 @@
 - ชุดเทส fixture เปลี่ยนให้แต่ละกลุ่มนับเฉพาะ rule ของตัวเอง (`cwd/` นับ `AR-CWD-*` เป็นต้น) · fixture `plat/` ถูกยกเว้นจาก mypy เพราะใช้ API ของหลาย OS โดยตั้งใจ · cwd.py เปิด `FILE_SINKS`/`select_argument` ให้ rule อื่นใช้ร่วม
 - เจอและแก้ระหว่างตรวจ: spec แรกนับ `Path("/home/bob")` ที่แค่สร้างไว้เป็นค่า (ใน test_redact) ว่าผิด → เปลี่ยนเป็นนับเฉพาะ path ที่ถูกเข้าถึง ให้สอดคล้องกับ `AR-CWD-001` · ตอนนี้ใน repo นี้ไม่มี finding ของ `AR-PLAT-001`
 
+**สถานะ P2-6 (2026-11-12):** ✅ เสร็จ · 714 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `static/project.py`: อ่าน `pyproject.toml` (`[project]` dependencies, `optional-dependencies`, `[dependency-groups]`) เป็นชื่อ distribution แบบ normalize (PEP 503) และหาชื่อ first-party (package/โมดูลชั้นบนสุดใน root และ `src/`) · TOML เสียหรือรูปแบบผิดจะ `ValueError`
+- `static/rules/optional_imports.py` (`AR-IMP-001`): optional import (`import`/`from`/`importlib.import_module("x")` ใน `try` ที่จับ `ImportError`/`ModuleNotFoundError`/`Exception`/bare, และ `pytest.importorskip("x")`) ที่ไม่ได้ประกาศไว้ · ไม่นับ stdlib, first-party, relative import และ fallback ใน `except` · มีตารางชื่อ import → distribution ที่ไม่ตรงกัน (`yaml`→`pyyaml`, `PIL`→`pillow`, `xdist`→`pytest-xdist`, ...) · confidence medium เพราะการจับคู่ชื่อเป็นการเดา · version ของ rule มี hash ของรายการที่ประกาศ
+- `default_rules(project)`: เพิ่ม `AR-IMP-001` เฉพาะเมื่อพบ `pyproject.toml` · fixture `imp/` มี `pyproject.toml` ของตัวเองและถูกยกเว้นจาก mypy
+- เจอและแก้ระหว่างตรวจ: สแกน repo นี้แล้ว `pytest.importorskip("xdist")` ถูกนับว่าไม่ได้ประกาศ ทั้งที่ประกาศ `pytest-xdist` ไว้ → เพิ่ม `xdist` และชื่อที่ไม่ตรงกันอื่นๆ ลงตาราง · ตอนนี้ไม่มี finding ของ `AR-IMP-001` ใน repo นี้
+- ทุก rule ของ P2-2 ถึง P2-6 เสร็จแล้ว ต่อไปคือ inline suppression (P2-7)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

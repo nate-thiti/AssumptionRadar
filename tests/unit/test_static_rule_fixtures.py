@@ -5,7 +5,8 @@ rules. Only findings of the group's own rules count: group ``cwd`` checks
 ``AR-CWD-*``, ``plat`` checks ``AR-PLAT-*`` and so on, so one fixture can use
 code that another rule also reports. A line marked
 ``# expect: AR-X-001, AR-X-001`` must produce exactly those findings (repeats
-count); every other line must produce none of the group's findings.
+count); every other line must produce none of the group's findings. A group
+with a ``pyproject.toml`` is scanned with the project-aware rules.
 """
 
 from __future__ import annotations
@@ -18,12 +19,13 @@ import pytest
 
 from assumptionradar.core.models import Finding
 from assumptionradar.static.engine import scan
+from assumptionradar.static.project import load_project
 from assumptionradar.static.rules import default_rules
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "static"
 _MARKER_RE = re.compile(r"#\s*expect:\s*(.+?)\s*$")
 
-FIXTURE_FILES = sorted(FIXTURES.rglob("*.py"))
+FIXTURE_FILES = sorted(FIXTURES.glob("*/*.py"))
 
 
 def group_prefix(path: Path) -> str:
@@ -41,7 +43,8 @@ def expected_findings(path: Path) -> Counter[tuple[int, str]]:
 
 
 def group_findings(path: Path) -> list[Finding]:
-    result = scan(path.parent, default_rules(), include=(path.name,))
+    project = load_project(path.parent) if (path.parent / "pyproject.toml").exists() else None
+    result = scan(path.parent, default_rules(project), include=(path.name,))
     assert result.errors == ()
     return [f for f in result.findings if f.rule_id.startswith(group_prefix(path))]
 
@@ -57,6 +60,8 @@ def test_fixture_files_exist() -> None:
         "exe/negative_exe.py",
         "plat/positive_plat.py",
         "plat/negative_plat.py",
+        "imp/positive_imp.py",
+        "imp/negative_imp.py",
     } <= names
 
 

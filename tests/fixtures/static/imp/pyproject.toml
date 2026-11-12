@@ -1,0 +1,12 @@
+# Project metadata for the AR-IMP-001 fixtures: only these distributions are declared.
+[project]
+name = "imp_fixture"
+version = "0"
+dependencies = ["requests>=2", "PyYAML"]
+
+[project.optional-dependencies]
+fast = ["orjson; python_version < '3.14'", "Pillow[jpeg]>=10"]
+
+[dependency-groups]
+test = ["numpy>=2", { include-group = "lint" }]
+lint = ["ruff"]
