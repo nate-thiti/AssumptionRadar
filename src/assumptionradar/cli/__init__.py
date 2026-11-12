@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
+import platform
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import IntEnum
 from pathlib import Path
 from typing import Any, TextIO
@@ -26,6 +28,8 @@ from assumptionradar.core.catalog import (
 )
 from assumptionradar.core.exceptions import BaselineError, ConfigurationError
 from assumptionradar.core.models import Severity
+from assumptionradar.reporting.sarif import sarif_from_scan
+from assumptionradar.reporting.scan_report import build_scan_report, is_failing, render_scan
 from assumptionradar.reporting.terminal import render_report, to_text, use_color
 from assumptionradar.static.engine import ScanResult
 from assumptionradar.static.project import load_project
@@ -47,7 +51,8 @@ class ExitCode(IntEnum):
 
     Attributes:
         OK: Success: no verified regression and nothing inconclusive.
-        FINDINGS: At least one verified test has a regression.
+        FINDINGS: At least one verified test has a regression, or a scan or baseline
+            comparison found a finding at or above the ``fail-on`` severity.
         USAGE: Bad arguments, an unknown scenario, or an unreadable or invalid report.
         INTERNAL: An unexpected error inside AssumptionRadar.
         INCONCLUSIVE: No regression, but at least one test is inconclusive or errored.
@@ -72,6 +77,63 @@ def emit(text: str, stream: TextIO) -> None:
     except UnicodeEncodeError:
         enc = getattr(stream, "encoding", None) or "utf-8"
         stream.write(text.encode(enc, "replace").decode(enc))
+
+
+def _add_scan_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register the ``scan`` subcommand.
+
+    Args:
+        commands: The subparsers action of the top-level parser.
+    """
+    scan_parser = commands.add_parser("scan", help="scan a project for environment assumptions")
+    scan_parser.add_argument("root", nargs="?", default=".", help="project root (default: current)")
+    scan_parser.add_argument(
+        "--config", default=None, help="use this config file instead of discovery"
+    )
+    scan_parser.add_argument(
+        "--format",
+        choices=("text", "json", "sarif"),
+        default=None,
+        help="output format (default: from config, else text)",
+    )
+    scan_parser.add_argument(
+        "-o", "--output", default=None, help="write the report to this file instead of stdout"
+    )
+    verbosity = scan_parser.add_mutually_exclusive_group()
+    verbosity.add_argument("-q", "--quiet", action="store_true", help="omit the summary line")
+    verbosity.add_argument(
+        "-v", "--verbose", action="store_true", help="show fixes, suppressed and skipped files"
+    )
+    scan_parser.add_argument(
+        "--fail-on",
+        choices=("info", "warning", "error"),
+        default=None,
+        help="lowest finding severity that fails (default: from config, else warning)",
+    )
+    scan_parser.add_argument(
+        "--strict-suppressions",
+        action="store_true",
+        help="refuse bare suppression comments and report them",
+    )
+    scan_parser.add_argument(
+        "--no-cache", action="store_true", help="do not read or write the result cache"
+    )
+    scan_parser.add_argument(
+        "--exit-zero", action="store_true", help="always exit 0 after a successful scan"
+    )
+    scan_parser.add_argument("--color", choices=("auto", "always", "never"), default="auto")
+
+
+def _add_doctor_parser(commands: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """Register the ``doctor`` subcommand.
+
+    Args:
+        commands: The subparsers action of the top-level parser.
+    """
+    doctor = commands.add_parser("doctor", help="show the environment and configuration")
+    doctor.add_argument("root", nargs="?", default=".", help="project root (default: current)")
+    doctor.add_argument("--config", default=None, help="use this config file instead of discovery")
+    doctor.add_argument("--format", choices=("text", "json"), default="text")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -145,6 +207,8 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="lowest new-finding severity that fails (default: from config, else warning)",
     )
+    _add_scan_parser(commands)
+    _add_doctor_parser(commands)
     return parser
 
 
@@ -405,6 +469,142 @@ def _cmd_baseline_compare(args: argparse.Namespace) -> int:
     return ExitCode.FINDINGS if failing else ExitCode.OK
 
 
+def _scan_body(args: argparse.Namespace, settings: Settings, result: ScanResult, root: Path) -> str:
+    """Build the text written by ``scan`` in the selected format.
+
+    Args:
+        args: The parsed ``scan`` arguments.
+        settings: The effective settings, after command-line overrides.
+        result: The completed scan.
+        root: The project root that was scanned.
+
+    Returns:
+        The report text, ending with a newline.
+    """
+    if settings.format == "json":
+        return json.dumps(build_scan_report(result, root=root, settings=settings), indent=2) + "\n"
+    if settings.format == "sarif":
+        return json.dumps(sarif_from_scan(result, root=root), indent=2) + "\n"
+    if args.output is not None or args.color == "never":
+        color = False
+    elif args.color == "always":
+        color = True
+    else:
+        color = use_color(sys.stdout)
+    lines = render_scan(
+        result, settings=settings, verbose=args.verbose, quiet=args.quiet, root=root
+    )
+    return to_text(lines, color=color)
+
+
+def _cmd_scan(args: argparse.Namespace) -> int:
+    """Scan a project and print or write the report."""
+    root = Path(args.root)
+    if not root.is_dir():
+        emit(f"assumptionradar: {root} is not a directory\n", sys.stderr)
+        return ExitCode.USAGE
+    config_path = Path(args.config) if args.config is not None else None
+    try:
+        settings = load_settings(root, config_path).with_overrides(
+            format=args.format,
+            fail_on=args.fail_on,
+            strict_suppressions=True if args.strict_suppressions else None,
+            cache=False if args.no_cache else None,
+        )
+    except ConfigurationError as exc:
+        emit(f"assumptionradar: {exc}\n", sys.stderr)
+        return ExitCode.USAGE
+    result = scan_with_settings(root, settings)
+    body = _scan_body(args, settings, result, root)
+    if args.output is None:
+        emit(body, sys.stdout)
+    else:
+        target = Path(args.output)
+        try:
+            target.write_text(body, encoding="utf-8")
+        except OSError as exc:
+            emit(f"assumptionradar: cannot write {target}: {exc}\n", sys.stderr)
+            return ExitCode.USAGE
+        if not args.quiet:
+            emit(f"report written: {target}\n", sys.stdout)
+    if args.exit_zero:
+        return ExitCode.OK
+    return ExitCode.FINDINGS if is_failing(result, settings) else ExitCode.OK
+
+
+def _pytest_version() -> str | None:
+    """Return the installed pytest version, or None when pytest is not installed."""
+    try:
+        return importlib.metadata.version("pytest")
+    except importlib.metadata.PackageNotFoundError:
+        return None
+
+
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    """Print the environment, configuration and active rules for diagnosis."""
+    root = Path(args.root)
+    if not root.is_dir():
+        emit(f"assumptionradar: {root} is not a directory\n", sys.stderr)
+        return ExitCode.USAGE
+    config_path = Path(args.config) if args.config is not None else None
+    config_error: str | None = None
+    try:
+        settings = load_settings(root, config_path)
+    except ConfigurationError as exc:
+        settings = Settings()
+        config_error = str(exc)
+    project = load_project(root)
+    active = [rule.rule_id for rule in rules_from_settings(settings, project)]
+    pytest_version = _pytest_version()
+    config_file = str(settings.config_file) if settings.config_file is not None else None
+    cache_dir = str(root / settings.cache_dir)
+    if args.format == "json":
+        payload: dict[str, object] = {
+            "assumptionradar": __version__,
+            "python": {
+                "version": platform.python_version(),
+                "implementation": platform.python_implementation(),
+                "executable": sys.executable,
+            },
+            "platform": sys.platform,
+            "root": str(root),
+            "config_file": config_file,
+            "config_error": config_error,
+            "pyproject": project.has_pyproject,
+            "active_rules": active,
+            "cache": {"enabled": settings.cache, "directory": cache_dir},
+            "pytest": pytest_version,
+        }
+        emit(json.dumps(payload, indent=2) + "\n", sys.stdout)
+    else:
+        if config_error is not None:
+            config_text = f"ERROR: {config_error}"
+        elif config_file is None:
+            config_text = "none found, using defaults"
+        else:
+            config_text = config_file
+        rows = [
+            ("assumptionradar", __version__),
+            (
+                "python",
+                f"{platform.python_version()} ({platform.python_implementation()}) "
+                f"{sys.executable}",
+            ),
+            ("platform", sys.platform),
+            ("project root", str(root)),
+            ("config", config_text),
+            (
+                "pyproject.toml",
+                "found" if project.has_pyproject else "not found (AR-IMP-001 needs one)",
+            ),
+            ("active rules", ", ".join(active)),
+            ("cache", cache_dir if settings.cache else "disabled"),
+            ("pytest", pytest_version if pytest_version is not None else "not installed"),
+        ]
+        emit("".join(f"{label:<17}{value}\n" for label, value in rows), sys.stdout)
+    return ExitCode.USAGE if config_error is not None else ExitCode.OK
+
+
 def _exit_status(code: str | int | None) -> int:
     """Convert the code of an argparse ``SystemExit`` into an exit status."""
     if code is None:
@@ -417,21 +617,24 @@ def _exit_status(code: str | int | None) -> int:
 
 def _dispatch(args: argparse.Namespace) -> int:
     """Run the subcommand selected by the parsed arguments."""
-    if args.command == "scenarios":
-        return _cmd_scenarios(args)
-    if args.command == "explain":
-        return _cmd_explain(args)
-    if args.command == "report":
-        return _cmd_report_show(args)
-    if args.command == "config":
-        return _cmd_config_check(args)
+    handlers: dict[str, Callable[[argparse.Namespace], int]] = {
+        "scenarios": _cmd_scenarios,
+        "explain": _cmd_explain,
+        "report": _cmd_report_show,
+        "config": _cmd_config_check,
+        "scan": _cmd_scan,
+        "doctor": _cmd_doctor,
+    }
+    handler: Callable[[argparse.Namespace], int] | None
     if args.command == "baseline":
-        return (
-            _cmd_baseline_create(args)
-            if args.baseline_command == "create"
-            else _cmd_baseline_compare(args)
+        handler = (
+            _cmd_baseline_create if args.baseline_command == "create" else _cmd_baseline_compare
         )
-    return ExitCode.USAGE
+    else:
+        handler = handlers.get(args.command)
+    if handler is None:
+        return ExitCode.USAGE
+    return handler(args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

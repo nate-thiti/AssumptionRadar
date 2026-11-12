@@ -250,6 +250,15 @@
 - ลองกับ repo นี้: 118 result, 5 rule, ผ่าน schema 0 error
 - ข้อจำกัด: column มาจาก AST (นับเป็น byte) บรรทัดที่มีอักษรนอก ASCII อาจเลื่อนจาก column แบบ UTF-16 ที่ SARIF ใช้เป็นค่าเริ่มต้น · ยังไม่มี `--format sarif` ใน CLI (มาใน P2-11)
 
+**สถานะ P2-11 (2026-11-12):** ✅ เสร็จ · 891 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `assumptionradar scan [ROOT] [--config] [--format text|json|sarif] [-o PATH] [-q|-v] [--fail-on] [--strict-suppressions] [--no-cache] [--exit-zero] [--color]` · ค่า option ใน CLI ทับค่าใน config (`with_overrides`)
+- text: บรรทัดละ finding `path:line:col: RULE [severity] message` (สีตาม severity) → suppression problem → ไฟล์ที่สแกนไม่ได้ → บรรทัดสรุป `N findings in M files; ...` (แดงถ้า fail, เขียวถ้าผ่าน) · `-v` เพิ่ม `fix:`, finding ที่ถูก ignore และไฟล์ที่ข้าม · `-q` ตัดบรรทัดสรุป
+- json: `reporting/scan_report.py` → `build_scan_report()` (schema_version "1", kind `assumptionradar-scan`, summary + by_severity + failing) · sarif: `sarif_from_scan()` ของ P2-10 · `--output` เขียนไฟล์ (ไม่มีสี) แล้วพิมพ์ `report written: PATH`
+- exit 1 เมื่อมี finding ถึงเกณฑ์ `fail-on` หรือ strict mode แล้วมี suppression problem · exit 2 เมื่อ root/config/output ผิด · ไฟล์ที่สแกนไม่ได้ไม่ทำให้ fail (แสดงในรายงาน)
+- `assumptionradar doctor [ROOT] [--config] [--format text|json]`: เวอร์ชัน, Python, platform, root, config (หรือ error), pyproject, rule ที่เปิด, cache, pytest · config ผิดยังแสดงครบแต่ exit 2
+- ลองกับ repo นี้: `scan src` = 0 finding ใน 40 ไฟล์ · `scan .` (ไม่รวม `tests/fixtures`) = 12 finding ตรงกับที่นับไว้ · `doctor` แสดงถูกต้อง
+- ข้อจำกัด: ยังไม่มี `explain` / `rules` สำหรับ rule static (ตอนนี้ `explain` ใช้กับ scenario เท่านั้น) · `--output` เขียนตรง ไม่ใช่แบบ atomic
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"
