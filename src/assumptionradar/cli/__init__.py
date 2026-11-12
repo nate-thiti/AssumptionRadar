@@ -11,14 +11,23 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from assumptionradar import __version__
-from assumptionradar.config import load_settings, rules_from_settings
+from assumptionradar.baseline import (
+    DEFAULT_BASELINE_NAME,
+    Baseline,
+    compare,
+    load_baseline,
+    write_baseline,
+)
+from assumptionradar.config import Settings, load_settings, rules_from_settings, scan_with_settings
 from assumptionradar.core.catalog import (
     DEFAULT_SET_NOTE,
     SCENARIO_CATALOG,
     find_scenario_info,
 )
-from assumptionradar.core.exceptions import ConfigurationError
+from assumptionradar.core.exceptions import BaselineError, ConfigurationError
+from assumptionradar.core.models import Severity
 from assumptionradar.reporting.terminal import render_report, to_text, use_color
+from assumptionradar.static.engine import ScanResult
 from assumptionradar.static.project import load_project
 
 _DESCRIPTION = "Discover hidden environmental assumptions before they break your software."
@@ -99,6 +108,43 @@ def _build_parser() -> argparse.ArgumentParser:
     check.add_argument("root", nargs="?", default=".", help="project root (default: current)")
     check.add_argument("--config", default=None, help="use this config file instead of discovery")
     check.add_argument("--format", choices=("text", "json"), default="text")
+    baseline_parser = commands.add_parser("baseline", help="record and compare known findings")
+    baseline_commands = baseline_parser.add_subparsers(
+        dest="baseline_command", required=True, metavar="ACTION"
+    )
+    baseline_create = baseline_commands.add_parser("create", help="record the current findings")
+    baseline_create.add_argument(
+        "root", nargs="?", default=".", help="project root (default: current)"
+    )
+    baseline_create.add_argument(
+        "--config", default=None, help="use this config file instead of discovery"
+    )
+    baseline_create.add_argument(
+        "--output",
+        default=None,
+        help=f"baseline file to write (default: ROOT/{DEFAULT_BASELINE_NAME})",
+    )
+    baseline_compare = baseline_commands.add_parser(
+        "compare", help="compare the current findings with a baseline"
+    )
+    baseline_compare.add_argument(
+        "root", nargs="?", default=".", help="project root (default: current)"
+    )
+    baseline_compare.add_argument(
+        "--config", default=None, help="use this config file instead of discovery"
+    )
+    baseline_compare.add_argument(
+        "--baseline",
+        default=None,
+        help=f"baseline file to compare with (default: ROOT/{DEFAULT_BASELINE_NAME})",
+    )
+    baseline_compare.add_argument("--format", choices=("text", "json"), default="text")
+    baseline_compare.add_argument(
+        "--fail-on",
+        choices=("info", "warning", "error"),
+        default=None,
+        help="lowest new-finding severity that fails (default: from config, else warning)",
+    )
     return parser
 
 
@@ -267,6 +313,98 @@ def _cmd_config_check(args: argparse.Namespace) -> int:
     return ExitCode.OK
 
 
+def _scan_for_baseline(root: Path, config: str | None) -> tuple[Settings, ScanResult] | None:
+    """Load the settings and scan the project for a baseline command.
+
+    Problems are reported on stderr here, so a ``None`` result means the caller
+    should return ``ExitCode.USAGE``.
+
+    Args:
+        root: The project root directory.
+        config: An explicit configuration file path, or None for discovery.
+
+    Returns:
+        The settings and the scan result, or None when the root or the settings are invalid.
+    """
+    if not root.is_dir():
+        emit(f"assumptionradar: {root} is not a directory\n", sys.stderr)
+        return None
+    config_path = Path(config) if config is not None else None
+    try:
+        settings = load_settings(root, config_path)
+    except ConfigurationError as exc:
+        emit(f"assumptionradar: {exc}\n", sys.stderr)
+        return None
+    result = scan_with_settings(root, settings)
+    for error in result.errors:
+        emit(
+            f"assumptionradar: warning: {error.relpath} could not be scanned "
+            f"({error.kind}): {error.message}\n",
+            sys.stderr,
+        )
+    return settings, result
+
+
+def _cmd_baseline_create(args: argparse.Namespace) -> int:
+    """Record the current findings in a baseline file."""
+    root = Path(args.root)
+    scanned = _scan_for_baseline(root, args.config)
+    if scanned is None:
+        return ExitCode.USAGE
+    _, result = scanned
+    output = Path(args.output) if args.output is not None else root / DEFAULT_BASELINE_NAME
+    baseline = Baseline.from_findings(result.findings)
+    try:
+        write_baseline(output, baseline)
+    except OSError as exc:
+        emit(f"assumptionradar: cannot write {output}: {exc}\n", sys.stderr)
+        return ExitCode.USAGE
+    count = len(baseline.entries)
+    noun = "finding" if count == 1 else "findings"
+    emit(f"baseline written: {output} ({count} {noun})\n", sys.stdout)
+    return ExitCode.OK
+
+
+def _cmd_baseline_compare(args: argparse.Namespace) -> int:
+    """Compare the current findings with a baseline and report the differences."""
+    root = Path(args.root)
+    scanned = _scan_for_baseline(root, args.config)
+    if scanned is None:
+        return ExitCode.USAGE
+    settings, result = scanned
+    if args.baseline is not None:
+        baseline_path = Path(args.baseline)
+    else:
+        baseline_path = root / DEFAULT_BASELINE_NAME
+    try:
+        baseline = load_baseline(baseline_path)
+    except BaselineError as exc:
+        emit(f"assumptionradar: {exc}\n", sys.stderr)
+        return ExitCode.USAGE
+    settings = settings.with_overrides(fail_on=args.fail_on)
+    comparison = compare(baseline, result.findings)
+    failing = comparison.failing(Severity.parse(settings.fail_on))
+    if args.format == "json":
+        payload: dict[str, object] = {"baseline": str(baseline_path), **comparison.to_dict()}
+        emit(json.dumps(payload, indent=2) + "\n", sys.stdout)
+    else:
+        lines = [
+            f"baseline {baseline_path}: {len(comparison.new)} new, "
+            f"{len(comparison.unchanged)} unchanged, {len(comparison.resolved)} resolved\n"
+        ]
+        for finding in comparison.new:
+            loc = finding.location
+            where = "-"
+            if loc is not None:
+                where = f"{loc.path}:{loc.line}" if loc.line is not None else loc.path
+            lines.append(f"new       {finding.rule_id}  {where}  {finding.message}\n")
+        for entry in comparison.resolved:
+            where = entry.path if entry.path is not None else "-"
+            lines.append(f"resolved  {entry.rule_id}  {where}  {entry.message}\n")
+        emit("".join(lines), sys.stdout)
+    return ExitCode.FINDINGS if failing else ExitCode.OK
+
+
 def _exit_status(code: str | int | None) -> int:
     """Convert the code of an argparse ``SystemExit`` into an exit status."""
     if code is None:
@@ -287,6 +425,12 @@ def _dispatch(args: argparse.Namespace) -> int:
         return _cmd_report_show(args)
     if args.command == "config":
         return _cmd_config_check(args)
+    if args.command == "baseline":
+        return (
+            _cmd_baseline_create(args)
+            if args.baseline_command == "create"
+            else _cmd_baseline_compare(args)
+        )
     return ExitCode.USAGE
 
 

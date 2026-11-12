@@ -15,9 +15,11 @@ from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Any, Final
 
+import assumptionradar
 from assumptionradar.core.exceptions import ConfigurationError
-from assumptionradar.static.engine import Rule
-from assumptionradar.static.project import ProjectInfo
+from assumptionradar.static.cache import FileCache
+from assumptionradar.static.engine import Rule, ScanResult, scan
+from assumptionradar.static.project import ProjectInfo, load_project
 from assumptionradar.static.rules import (
     OptionalImportRule,
     PathLookupRule,
@@ -504,3 +506,31 @@ def rules_from_settings(settings: Settings, project: ProjectInfo) -> tuple[Rule,
         and rule.rule_id not in settings.ignore_rules
     ]
     return tuple(selected)
+
+
+def scan_with_settings(root: Path, settings: Settings) -> ScanResult:
+    """Scan a project root using the rules and options from ``settings``.
+
+    Args:
+        root: The project root directory.
+        settings: The validated settings that select rules, files and caching.
+
+    Returns:
+        The scan result from :func:`assumptionradar.static.engine.scan`.
+    """
+    rules = rules_from_settings(settings, load_project(root))
+    cache = (
+        FileCache(root / settings.cache_dir, f"static-{assumptionradar.__version__}")
+        if settings.cache
+        else None
+    )
+    return scan(
+        root,
+        rules,
+        include=settings.include,
+        exclude=settings.exclude,
+        use_default_excludes=settings.use_default_excludes,
+        max_file_bytes=settings.max_file_bytes,
+        cache=cache,
+        strict_suppressions=settings.strict_suppressions,
+    )

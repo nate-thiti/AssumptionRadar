@@ -21,3 +21,7 @@ class VerificationError(AssumptionRadarError):
 
 class ObserverError(AssumptionRadarError):
     """Raised when a runtime observer is misused, for example by nested activation."""
+
+
+class BaselineError(AssumptionRadarError):
+    """Raised when a baseline file cannot be read or is invalid."""

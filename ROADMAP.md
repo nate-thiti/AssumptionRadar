@@ -233,6 +233,16 @@
 - เจอและแก้: เทส JSON ของ Opus ลืมว่ามี pyproject จึงต้องมี `AR-IMP-001` ด้วย · ตอน review เจอว่า root แบบ relative (`.`) ไม่ไล่ขึ้นไปโฟลเดอร์แม่ (`Path(".").parents` ว่าง) → แก้เป็น `absolute()` (ไม่ใช้ `resolve()` เพื่อไม่ให้ path เปลี่ยนรูป) + เพิ่มเทส
 - ยังไม่ได้ใช้ settings ในการ scan จริง ส่วนนี้เป็นของ P2-11 (`scan`)
 
+**สถานะ P2-9 (2026-11-12):** ✅ เสร็จ · 836 tests ผ่าน · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `baseline.py`: `Baseline` / `BaselineEntry` (fingerprint, rule_id, path, symbol, message — **ไม่เก็บเลขบรรทัด** และไม่มี timestamp จึงเขียนซ้ำได้ไฟล์เดิมทุก byte เหมาะจะ commit) · `write_baseline` เขียนแบบ atomic · `load_baseline` ตรวจ schema/kind/entry/fingerprint ซ้ำ แล้วโยน `BaselineError` ที่ขึ้นต้นด้วย path
+- `compare(baseline, findings)` แยก `new` / `unchanged` (เรียงตามลำดับ finding) / `resolved` (entry ใน baseline ที่หายไปแล้ว) · `failing(threshold)` นับเฉพาะ finding ใหม่ที่ severity ถึงเกณฑ์
+- `config.scan_with_settings(root, settings)`: สแกนตาม config (rules, include/exclude, cache ที่ `ROOT/cache-dir`) เป็นตัวกลางที่ P2-11 จะใช้ต่อ
+- CLI `baseline create [ROOT] [--config] [--output]` (ค่าเริ่มต้น `ROOT/.assumptionradar-baseline.json`) · `baseline compare [ROOT] [--config] [--baseline] [--format text|json] [--fail-on]` → exit 1 เมื่อมี finding ใหม่ถึงเกณฑ์ `fail-on`, exit 2 เมื่อไม่มี baseline หรือ config/baseline เสีย · ไฟล์ที่สแกนไม่ได้จะเตือนใน stderr
+- ลองกับ repo นี้: 118 finding โดย 106 อยู่ใน `tests/fixtures` (ตั้งใจให้มี) อีก 12 ตรงกับที่นับไว้ตอน P2-6 · compare ทันทีได้ 0 new / 118 unchanged
+- finding ซ้ำกันใน scope เดียวกัน (fingerprint `:2`, `:3`) ถูกนับเป็นจำนวน: ลบไป 1 ตัว = 1 resolved, เพิ่ม 1 ตัว = 1 new (ไม่สนว่าตัวไหนเป็นตัวที่เพิ่ม)
+- ข้อจำกัด: ไฟล์ที่ parse ไม่ได้ finding ของไฟล์นั้นจะถูกนับว่า resolved (มีคำเตือนใน stderr)
+- เพิ่ม `.assumptionradar_cache/` ใน `.gitignore`
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

@@ -19,3 +19,6 @@ build/
 .coverage
 coverage.xml
 htmlcov/
+
+# AssumptionRadar scan cache
+.assumptionradar_cache/
