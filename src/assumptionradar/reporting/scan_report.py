@@ -219,15 +219,14 @@ def _finding_lines(findings: Sequence[Finding], *, verbose: bool) -> list[Line]:
     return lines
 
 
-def _summary_line(result: ScanResult, settings: Settings) -> Line:
-    """Return the closing summary line, coloured by whether the scan fails.
+def summary_text(result: ScanResult) -> str:
+    """Return the one-line summary of a scan, without colour codes.
 
     Args:
         result: The completed scan.
-        settings: The settings used for the scan.
 
     Returns:
-        The summary line.
+        The count of findings and files, followed by any suppression and error counts.
     """
     text = f"{_plural(len(result.findings), 'finding')} in {_plural(result.files_scanned, 'file')}"
     extras: list[str] = []
@@ -239,4 +238,17 @@ def _summary_line(result: ScanResult, settings: Settings) -> Line:
         extras.append(_plural(len(result.suppression_problems), "suppression problem"))
     if extras:
         text += "; " + ", ".join(extras)
-    return Line(text, "red" if is_failing(result, settings) else "green")
+    return text
+
+
+def _summary_line(result: ScanResult, settings: Settings) -> Line:
+    """Return the closing summary line, coloured by whether the scan fails.
+
+    Args:
+        result: The completed scan.
+        settings: The settings used for the scan.
+
+    Returns:
+        The summary line.
+    """
+    return Line(summary_text(result), "red" if is_failing(result, settings) else "green")

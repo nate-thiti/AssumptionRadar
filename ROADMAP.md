@@ -259,6 +259,15 @@
 - ลองกับ repo นี้: `scan src` = 0 finding ใน 40 ไฟล์ · `scan .` (ไม่รวม `tests/fixtures`) = 12 finding ตรงกับที่นับไว้ · `doctor` แสดงถูกต้อง
 - ข้อจำกัด: ยังไม่มี `explain` / `rules` สำหรับ rule static (ตอนนี้ `explain` ใช้กับ scenario เท่านั้น) · `--output` เขียนตรง ไม่ใช่แบบ atomic
 
+**สถานะ P2-12 (2026-11-13):** ✅ เสร็จ · 917 tests ผ่าน (รันด้วย `FORCE_COLOR=1` แบบเดียวกับ CI) · ruff และ mypy strict ผ่าน (Windows + `--platform linux`)
+- `api.py`: `Radar(*, config, use_config, rules, ignore_rules, fail_on, cache, strict_suppressions)` ตรวจค่าตั้งแต่สร้าง (error ขึ้นต้นด้วย `Radar:`) · `.scan(path=".") -> ScanReport` ใช้ config ของโปรเจคแล้วทับด้วยค่าที่ส่งมา · `.verify(test_ids, *, root, scenarios="default", timeout_s, baseline_runs, runner) -> VerificationReport`
+- `ScanReport` (frozen): `findings`, `suppressed`, `errors`, `failing`, `summary()`, `to_dict()`/`to_json()`, `to_sarif_dict()`/`to_sarif()`, `render(verbose, color)`, `baseline()`, `compare(baseline หรือ path)` · `VerificationReport`: `results`, `regressions`, `failing`, `summary()`, `to_dict()`/`to_json()` (รูปแบบเดียวกับรายงาน v1 ของ pytest plugin จึงเปิดด้วย `report show` ได้)
+- `assumptionradar/__init__.py`: export 13 ชื่อผ่าน `__all__` แบบ lazy (PEP 562) — `import assumptionradar` ไม่โหลด static/config/analysis เพราะ pytest plugin import แพ็กเกจนี้ในทุก pytest run · exception ทั้งหมดดักได้ด้วย `AssumptionRadarError`
+- `Settings.validated_replace(source, **changes)` (with_overrides ใช้ตัวนี้ด้วย prefix `command line`) · `scan_report.summary_text()` เป็น public
+- เปลี่ยนจากแผนเดิม: ไม่มี `mode=` เพราะแยกเป็น `scan()` กับ `verify()` ชัดกว่า
+- ลองจริง: โปรเจคตัวอย่างที่อ่าน `data.txt` แบบ relative → `scan` เจอ 1 finding, `verify(..., scenarios="cwd")` รัน pytest จริงแล้วยืนยันว่า test นั้น regression ส่วน test ปกติ no difference
+- เทส verify ในชุดเทสใช้ runner ปลอม (ไม่รัน pytest ซ้อน)
+
 ---
 
 ## Phase 3 — v0.3 "Ecosystem + Release"

@@ -131,6 +131,22 @@ class Settings:
             TypeError: If a name is not a settings field.
             ConfigurationError: If a resulting value is invalid.
         """
+        return self.validated_replace(_COMMAND_LINE, **changes)
+
+    def validated_replace(self, source: str, **changes: object) -> Settings:
+        """Return a copy with the given values applied and validated.
+
+        Args:
+            source: The message prefix used in configuration errors, such as ``"command line"``.
+            **changes: Field names and their new values. ``None`` values are ignored.
+
+        Returns:
+            A new, validated settings object.
+
+        Raises:
+            TypeError: If a name is not a settings field.
+            ConfigurationError: If a resulting value is invalid. The message starts with ``source``.
+        """
         names = {field.name for field in fields(self)}
         raw: dict[str, object] = {name: getattr(self, name) for name in names}
         for key, value in changes.items():
@@ -138,7 +154,7 @@ class Settings:
                 raise TypeError(f"Settings has no setting {key!r}")
             if value is not None:
                 raw[key] = value
-        return replace(self, **_validate(raw, _COMMAND_LINE))
+        return replace(self, **_validate(raw, source))
 
     def to_dict(self) -> dict[str, object]:
         """Return the settings as a JSON-friendly dict keyed by field name.
